@@ -1,10 +1,12 @@
 import flask
 from flask import request
 import os, shutil
-
+import cv2
+from food_image_processing import food_detection
 app = flask.Flask(__name__)
-uploadDir = "upload"
+uploadDir = "upload"#
 
+yolov2 = food_detection.FoodDetectionModel
 
 @app.route("/", methods=['GET'])
 def handle_call():
@@ -17,8 +19,17 @@ def store_image():
         print("Error: recieved image upload request but request contained no image", flush=True)
         return {"error": "No image file found"}
     image = request.files['image']
-    image.save(f"./upload/{image.filename}")
-    print("Recieved and stored image from app capture, at: " + f"./upload/{image.filename}", flush=True)
+
+    filePathToSave = f"./upload/{image.filename}"
+    if os.path.isfile(filePathToSave):
+        newFileName = image.filename.split(".")[0] + "_1"
+        print("An existing image already exists, renaming image file")
+        filePathToSave = f"./upload/{newFileName}" + ".jpg"
+    # image.save(f"./upload/{image.filename}")
+    image.save(filePathToSave)
+    print("Recieved image from app capture, stored at: " + filePathToSave, flush=True)
+    if len(os.listdir(uploadDir)) >= 2:
+        processImages()
     return {"message": "Image recieved and stored successfully", "filename":image.filename}
 
 
@@ -35,6 +46,30 @@ def clearUploadDir():
             print('Failed to delete %s. Reason: %s' % (file_path, e) + "\n")
     if len(os.listdir(uploadDir)) == 0:
         print("Successfully cleared upload directory!\n", flush=True)
+
+
+
+
+def processImages():
+    imagePaths = os.listdir(uploadDir)
+    print("Running image processing on the following files:")
+    for file in imagePaths:
+        print(file)
+    
+    print("Detecting foods...")
+    input_shape = yolov2.get_input_shape()
+    input_path = os.path.join(uploadDir, imagePaths[0])
+    input_data = yolov2.preprocess_image(input_path, input_shape)
+
+    results = yolov2.detect_foods(input_data)
+    boxes, confidences, class_ids = yolov2.decode_yolo_output(results, cv2.imread(input_path).shape)
+    yolov2.draw_boxes(input_path, boxes, confidences, class_ids)
+
+    print(class_ids)
+    #Set input tensor
+    
+
+    
 
 
 if __name__ == '__main__':
