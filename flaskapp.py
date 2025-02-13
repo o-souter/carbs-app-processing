@@ -20,9 +20,6 @@ def store_image():
     image.save(f"./upload/{image.filename}")
     print("Recieved and stored image from app capture, at: " + f"./upload/{image.filename}", flush=True)
     return {"message": "Image recieved and stored successfully", "filename":image.filename}
-    
-    return
-
 
 
 def clearUploadDir():
@@ -38,7 +35,8 @@ def clearUploadDir():
             print('Failed to delete %s. Reason: %s' % (file_path, e) + "\n")
     if len(os.listdir(uploadDir)) == 0:
         print("Successfully cleared upload directory!\n", flush=True)
+
+
 if __name__ == '__main__':
     clearUploadDir()
-
     app.run(host="0.0.0.0")
