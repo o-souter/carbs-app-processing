@@ -27,8 +27,8 @@ class YoloV2:
         outputs = net.forward(output_layers)
 
         # Process detections
-        conf_threshold = 0.2  # Confidence threshold
-        nms_threshold = 0.1   # Non-Maximum Suppression threshold
+        conf_threshold = 0  # Confidence threshold
+        nms_threshold = 0.2   # Non-Maximum Suppression threshold
 
         boxes = []
         confidences = []
