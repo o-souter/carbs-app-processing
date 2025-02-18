@@ -10,7 +10,7 @@ net = cv2.dnn.readNetFromDarknet(cfg_path, weights_path)
 with open(names_path, "r") as nameFile:
     classes = [line.strip() for line in nameFile.readlines()]
 
-test_image_path = "ddf20b.jpg"
+test_image_path = "upload\fishandchips.jpg"
 image = cv2.imread(test_image_path)
 
 height, width = image.shape[:2]
@@ -27,7 +27,7 @@ output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers()]
 outputs = net.forward(output_layers)
 
 # Process detections
-conf_threshold = 0.5  # Confidence threshold
+conf_threshold = 0.2  # Confidence threshold
 nms_threshold = 0.4   # Non-Maximum Suppression threshold
 
 boxes = []

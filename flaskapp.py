@@ -2,11 +2,12 @@ import flask
 from flask import request
 import os, shutil
 import cv2
-from food_image_processing import food_detection
+# from food_image_processing import food_detection
+from food_image_processing import yolov2
 app = flask.Flask(__name__)
 uploadDir = "upload"#
 
-yolov2 = food_detection.FoodDetectionModel
+yolov2_model = yolov2.YoloV2
 
 @app.route("/", methods=['GET'])
 def handle_call():
@@ -31,7 +32,8 @@ def store_image():
     image.save(filePathToSave)
     print("Recieved image from app capture, stored at: " + filePathToSave, flush=True)
     if len(os.listdir(uploadDir)) >= 2:
-        processImages()
+        detections = processImages()
+        return{"message": "Images successfully processed and classified: " + detections}
     return {"message": "Image recieved and stored successfully", "filename":image.filename}
 
 
@@ -58,23 +60,11 @@ def processImages():
     for file in imagePaths:
         print(file)
     
-    print("Detecting foods...")
-    input_shape = yolov2.get_input_shape()
-    input_path = os.path.join(uploadDir, imagePaths[0])
-    input_data = yolov2.preprocess_image(input_path, input_shape)
-
-    results = yolov2.detect_foods(input_data)
-    boxes, confidences, class_ids = yolov2.decode_yolo_output(results, cv2.imread(input_path).shape)
-    yolov2.draw_boxes(input_path, boxes, confidences, class_ids)
-
-    print(class_ids)
-    #Set input tensor
-    
-
+    return yolov2_model.analyse_image(os.path.join(uploadDir, file))
     
 
 
 if __name__ == '__main__':
     # clearUploadDir()
     app.run(host="0.0.0.0")
-    processImages()
+    print(processImages())
