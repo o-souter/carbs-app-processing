@@ -2,6 +2,8 @@ import flask
 from flask import request
 import os, shutil
 import cv2
+import subprocess
+
 # from food_image_processing import food_detection
 from food_image_processing import yolov2
 app = flask.Flask(__name__)
@@ -33,7 +35,8 @@ def store_image():
     print("Recieved image from app capture, stored at: " + filePathToSave, flush=True)
     if len(os.listdir(uploadDir)) >= 2:
         detections = processImages()
-        return{"message": "Images successfully processed and classified: " + detections}
+        print("Detected: ",detections)
+        return{"message": "Images successfully processed and classified"}
     return {"message": "Image recieved and stored successfully", "filename":image.filename}
 
 
@@ -63,8 +66,26 @@ def processImages():
     return yolov2_model.analyse_image(os.path.join(uploadDir, file))
     
 
+def get_git_commit_count():
+    try:
+        # Run git command to get the number of commits
+        result = subprocess.run(
+            ['git', 'rev-list', '--count', 'HEAD'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+            text=True
+        )
+        return int(result.stdout.strip())
+    except subprocess.CalledProcessError:
+        return None  # In case git fails
+
+
 
 if __name__ == '__main__':
     # clearUploadDir()
+    version = "0.1." + str(get_git_commit_count())
+    print("-------------------------------------------------")
+    print("\nC.A.R.B.S Processing backend v" + version + "\n")
     app.run(host="0.0.0.0")
     print(processImages())
