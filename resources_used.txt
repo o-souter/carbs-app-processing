@@ -1,0 +1,3 @@
+YOLOv2 model on food100 - https://bennycheung.github.io/yolo-for-real-time-food-detection
+
+darknet repository/folder - to run yolo model - https://github.com/AlexeyAB/darknet

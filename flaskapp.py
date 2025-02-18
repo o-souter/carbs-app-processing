@@ -19,6 +19,8 @@ def store_image():
         print("Error: recieved image upload request but request contained no image", flush=True)
         return {"error": "No image file found"}
     image = request.files['image']
+    if len(os.listdir(uploadDir)) >= 2:
+        clearUploadDir()
 
     filePathToSave = f"./upload/{image.filename}"
     if os.path.isfile(filePathToSave):
@@ -73,5 +75,6 @@ def processImages():
 
 
 if __name__ == '__main__':
-    clearUploadDir()
+    # clearUploadDir()
     app.run(host="0.0.0.0")
+    processImages()
