@@ -36,7 +36,7 @@ def store_image():
     if len(os.listdir(uploadDir)) >= 2:
         detections = processImages()
         print("Detected: ",detections)
-        return{"message": "Images successfully processed and classified"}
+        return{"message": str(detections)}
     return {"message": "Image recieved and stored successfully", "filename":image.filename}
 
 
@@ -78,7 +78,7 @@ def get_git_commit_count():
         )
         return int(result.stdout.strip())
     except subprocess.CalledProcessError:
-        return None  # In case git fails
+        return "?"  # In case git fails
 
 
 
@@ -87,5 +87,5 @@ if __name__ == '__main__':
     version = "0.1." + str(get_git_commit_count())
     print("-------------------------------------------------")
     print("\nC.A.R.B.S Processing backend v" + version + "\n")
-    app.run(host="0.0.0.0")
+    app.run(host="0.0.0.0")#, debug=True)
     print(processImages())
