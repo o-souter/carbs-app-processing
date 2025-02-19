@@ -13,7 +13,7 @@ yolov2_model = yolov2.YoloV2
 
 @app.route("/", methods=['GET'])
 def handle_call():
-    return "Successfully Connected"
+    return "C.A.R.B.S Processing Backend v" + version + " Successfully Connected"
 
 
 @app.route("/upload-image", methods=['POST'])
