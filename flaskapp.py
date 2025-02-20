@@ -11,7 +11,7 @@ uploadDir = "upload"#
 
 yolov2_model = yolov2.YoloV2
 
-@app.route("/", methods=['GET'])
+@app.route("/test", methods=['GET'])
 def handle_call():
     return "C.A.R.B.S Processing Backend v" + version + " Successfully Connected"
 
@@ -88,4 +88,6 @@ if __name__ == '__main__':
     print("-------------------------------------------------")
     print("\nC.A.R.B.S Processing backend v" + version + "\n")
     app.run(host="0.0.0.0")#, debug=True)
+    # app.run(host="192.168.1.168", port=5000)#, debug=True)
+    # app.run(host="10.180.229.100", port=5000)
     print(processImages())
