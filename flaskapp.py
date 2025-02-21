@@ -13,6 +13,7 @@ yolov2_model = yolov2.YoloV2
 
 @app.route("/test", methods=['GET'])
 def handle_call():
+    print("Successfully connected to android device.", flush=True)
     return "C.A.R.B.S Processing Backend v" + version + " Successfully Connected"
 
 
@@ -54,9 +55,6 @@ def clearUploadDir():
     if len(os.listdir(uploadDir)) == 0:
         print("Successfully cleared upload directory!\n", flush=True)
 
-
-
-
 def processImages():
     imagePaths = os.listdir(uploadDir)
     print("Running image processing on the following files:")
@@ -64,7 +62,6 @@ def processImages():
         print(file)
     
     return yolov2_model.analyse_image(os.path.join(uploadDir, file))
-    
 
 def get_git_commit_count():
     try:
@@ -79,8 +76,6 @@ def get_git_commit_count():
         return int(result.stdout.strip())
     except subprocess.CalledProcessError:
         return "?"  # In case git fails
-
-
 
 if __name__ == '__main__':
     # clearUploadDir()
