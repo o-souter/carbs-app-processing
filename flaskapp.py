@@ -17,28 +17,45 @@ def handle_call():
     return "C.A.R.B.S Processing Backend v" + version + " Successfully Connected"
 
 
-@app.route("/upload-image", methods=['POST'])
-def store_image():
+@app.route("/upload-data", methods=['POST'])
+def store_data():
     if 'image' not in request.files:
-        print("Error: recieved image upload request but request contained no image", flush=True)
+        print("Error: recieved data upload request but request contained no image", flush=True)
         return {"error": "No image file found"}
+    if 'pointcloud' not in request.files:
+        print("Error: recieved data upload request but request contained no pointcloud file", flush=True)
+        return {"error": "No pointcloud file found"}
+    
     image = request.files['image']
     if len(os.listdir(uploadDir)) >= 2:
         clearUploadDir()
 
-    filePathToSave = f"./upload/{image.filename}"
-    if os.path.isfile(filePathToSave):
+    imgFilePathToSave = f"./upload/{image.filename}"
+    if os.path.isfile(imgFilePathToSave):
         newFileName = image.filename.split(".")[0] + "_1"
         print("An existing image already exists, renaming image file")
-        filePathToSave = f"./upload/{newFileName}" + ".jpg"
+        imgFilePathToSave = f"./upload/{newFileName}" + ".jpg"
     # image.save(f"./upload/{image.filename}")
-    image.save(filePathToSave)
-    print("Recieved image from app capture, stored at: " + filePathToSave, flush=True)
-    if len(os.listdir(uploadDir)) >= 2:
-        detections = processImages()
-        print("Detected: ",detections)
-        return{"message": str(detections)}
-    return {"message": "Image recieved and stored successfully", "filename":image.filename}
+    image.save(imgFilePathToSave)
+    print("Recieved image from app capture, stored at: " + imgFilePathToSave, flush=True)
+    
+    pointcloud = request.files['pointcloud']
+    pointFilePathToSave = f"./upload/{pointcloud.filename}"
+    if os.path.isfile(pointFilePathToSave):
+        newFileName = pointcloud.filename.split(".")[0] + "_1"
+        print("An existing pointcloud already exists, renaming pointcloud file")
+        pointFilePathToSave = f"./upload/{newFileName}" + ".jpg"
+    
+    pointcloud.save(pointFilePathToSave)
+    print("Recieved pointcloud from app capture, stored at: " + pointFilePathToSave, flush=True)
+
+    # if len(os.listdir(uploadDir)) >= 2:
+    #     detections = processImages()
+    #     print("Detected: ",detections)
+    #     return{"message": str(detections)}
+    
+    
+    return {"message": "Image and pointcloud recieved and stored successfully", "filename":image.filename}
 
 
 def clearUploadDir():
