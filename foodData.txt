@@ -1,0 +1,2 @@
+Message: Image and pointcloud recieved and stored successfully
+hamburger:50.0

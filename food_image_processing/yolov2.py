@@ -57,7 +57,8 @@ class YoloV2:
             indices = indices.flatten()
         else:
             indices = []  # Set to an empty list if there are no valid detections
-            return []
+            mainImg = cv2.imwrite("mainImg.png", image)
+            return "mainImg.png", []
 
         for i in indices:
             class_name = classes[class_ids[i]]
@@ -66,12 +67,13 @@ class YoloV2:
             detections.append(class_name)
             x, y, w, h = boxes[i]
             label=f"{classes[class_ids[i]]}: {confidences[i]:.2f}"
-            cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            cv2.putText(image, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3)
+            cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 40)
+            cv2.putText(image, label, (x, y - 40), cv2.FONT_HERSHEY_SIMPLEX, 5, (0, 255, 0), 5)
             # Show image
         cv2.namedWindow("YOLOv2 Detection", cv2.WINDOW_NORMAL)  # Allow resizing
         cv2.resizeWindow("YOLOv2 Detection", 800, 600)  
         cv2.imshow("YOLOv2 Detection", image)
         cv2.waitKey(5)
         cv2.destroyAllWindows()
-        return detections
+        cv2.imwrite("mainImg.png", image)
+        return "mainImg.png", detections

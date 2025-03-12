@@ -1,8 +1,10 @@
 import flask
-from flask import request
+from flask import request, Flask, send_file, jsonify
+import zipfile
 import os, shutil
 import cv2
 import subprocess
+import numpy as np
 
 # from food_image_processing import food_detection
 from food_image_processing import yolov2
@@ -48,15 +50,45 @@ def store_data():
     
     pointcloud.save(pointFilePathToSave)
     print("Recieved pointcloud from app capture, stored at: " + pointFilePathToSave, flush=True)
+    mainImg, foodImages, foodData = run_carbs_algo(imgFilePathToSave, pointFilePathToSave)
+    return createResponseZip("Image and pointcloud recieved and stored successfully", mainImg, foodImages, foodData)
 
-    # if len(os.listdir(uploadDir)) >= 2:
-    #     detections = processImages()
-    #     print("Detected: ",detections)
-    #     return{"message": str(detections)}
-    
-    
-    return {"message": "Image and pointcloud recieved and stored successfully", "filename":image.filename}
 
+#{"message": "Image and pointcloud recieved and stored successfully", "filenames":[image.filename, pointcloud.filename]}
+
+
+
+def run_carbs_algo(imgFile, pointCloudFile):
+    # foodData = "Not implemented yet!"
+    processedImage = processImage(imgFile)
+    labelled_img = processedImage[0]
+    detections = processedImage[1]
+    
+    carbs = np.full(shape=len(detections), fill_value=50, dtype=np.double) #np.zeros_like(detections, float)
+    foodData = dict(zip(detections, carbs))
+    # carbs_data = calculateCarbs(pointCloudFile)
+    
+    return labelled_img, labelled_img, foodData
+
+def createResponseZip(message, mainImg, foodImages, foodData):
+    zip_filename = "files_bundle.zip"
+
+    #Create zip file and add images
+    with zipfile.ZipFile(zip_filename, "w") as  zipf:
+        zipf.write(mainImg)
+        # for img in foodImages:
+        #     zipf.write(img)
+
+        with open("foodData.txt", "w") as info_file:
+            info_file.write(f"Message: {message}\n")
+
+            for item, carbs in foodData.items():
+                # info_file.write(f"Food data: \n{foodData}")
+                info_file.write(item + ":" + str(carbs))
+
+        zipf.write("foodData.txt")
+
+    return send_file(zip_filename, as_attachment=True)
 
 def clearUploadDir():
     print("\nAttempting to clear upload directory...", flush=True)
@@ -72,13 +104,14 @@ def clearUploadDir():
     if len(os.listdir(uploadDir)) == 0:
         print("Successfully cleared upload directory!\n", flush=True)
 
-def processImages():
-    imagePaths = os.listdir(uploadDir)
+def processImage(imgFilePath):
     print("Running image processing on the following files:")
-    for file in imagePaths:
-        print(file)
+
+    analysis = yolov2_model.analyse_image(imgFilePath)
+    labelled_img = analysis[0]
+    detections = analysis[1]
     
-    return yolov2_model.analyse_image(os.path.join(uploadDir, file))
+    return labelled_img, detections
 
 def get_git_commit_count():
     try:
@@ -96,10 +129,10 @@ def get_git_commit_count():
 
 if __name__ == '__main__':
     # clearUploadDir()
-    version = "0.1." + str(get_git_commit_count())
+    version = "0.2." + str(get_git_commit_count())
     print("-------------------------------------------------")
     print("\nC.A.R.B.S Processing backend v" + version + "\n")
     app.run(host="0.0.0.0")#, debug=True)
     # app.run(host="192.168.1.168", port=5000)#, debug=True)
     # app.run(host="10.180.229.100", port=5000)
-    print(processImages())
+    # print(processImages())
