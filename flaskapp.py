@@ -62,13 +62,33 @@ def run_carbs_algo(imgFile, pointCloudFile):
     # foodData = "Not implemented yet!"
     processedImage = processImage(imgFile)
     labelled_img = processedImage[0]
-    detections = processedImage[1]
-    
+    detections = [item[0] for item in processedImage[1]]# processedImage[1]
+    boxes = [item[1] for item in processedImage[1]]
     carbs = np.full(shape=len(detections), fill_value=50, dtype=np.double) #np.zeros_like(detections, float)
-    foodData = dict(zip(detections, carbs))
+    keys = tuple(detections)
+    foodData = dict(zip(keys, carbs))
     # carbs_data = calculateCarbs(pointCloudFile)
+    detection_images = get_detection_crops(detections, boxes, imgFile)
     
-    return labelled_img, labelled_img, foodData
+    return labelled_img, detection_images, foodData
+
+def get_detection_crops(detections, boxes, imgFile):
+    mainImg = cv2.imread(imgFile) #cv2.imread("mainImg.png")
+    detection_crops = []
+    # boxes = detections
+    for d in range(0, len(detections)):
+        box = boxes[d]
+        x = box[0]
+        y = box[1]
+        w = box[2]
+        h = box[3]
+        cropped_img = mainImg[y:y+h, x:x+w]
+        name = "detection_" + str(d) + ".png"
+        cv2.imwrite(name, cropped_img)
+        detection_crops.append(name)
+
+    return detection_crops
+
 
 def createResponseZip(message, mainImg, foodImages, foodData):
     zip_filename = "files_bundle.zip"
@@ -76,8 +96,8 @@ def createResponseZip(message, mainImg, foodImages, foodData):
     #Create zip file and add images
     with zipfile.ZipFile(zip_filename, "w") as  zipf:
         zipf.write(mainImg)
-        # for img in foodImages:
-        #     zipf.write(img)
+        for img in foodImages:
+            zipf.write(img)
 
         with open("foodData.txt", "w") as info_file:
             info_file.write(f"Message: {message}\n")

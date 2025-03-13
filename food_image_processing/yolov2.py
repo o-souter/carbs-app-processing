@@ -28,7 +28,7 @@ class YoloV2:
 
         # Process detections
         conf_threshold = 0  # Confidence threshold
-        nms_threshold = 0.2   # Non-Maximum Suppression threshold
+        nms_threshold = 0.5   # Non-Maximum Suppression threshold
 
         boxes = []
         confidences = []
@@ -64,7 +64,8 @@ class YoloV2:
             class_name = classes[class_ids[i]]
             confidence = confidences[i]
             print(f"Detected: {class_name} - Confidence: {confidence:.2f}")
-            detections.append(class_name)
+            # detections.append(class_name)
+            detections.append([class_name, boxes[i]])
             x, y, w, h = boxes[i]
             label=f"{classes[class_ids[i]]}: {confidences[i]:.2f}"
             cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 40)
