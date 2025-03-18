@@ -5,11 +5,14 @@ import os, shutil
 import cv2
 import subprocess
 import numpy as np
+import scipy
 
 # from food_image_processing import food_detection
 from food_image_processing import yolov2
 app = flask.Flask(__name__)
 uploadDir = "upload"#
+
+markerSizeCM = 6
 
 yolov2_model = yolov2.YoloV2
 
@@ -64,13 +67,86 @@ def run_carbs_algo(imgFile, pointCloudFile):
     labelled_img = processedImage[0]
     detections = [item[0] for item in processedImage[1]]# processedImage[1]
     boxes = [item[1] for item in processedImage[1]]
-    carbs = np.full(shape=len(detections), fill_value=50, dtype=np.double) #np.zeros_like(detections, float)
+    # carbs = np.full(shape=len(detections), fill_value=50, dtype=np.double) #np.zeros_like(detections, float)
     keys = tuple(detections)
-    foodData = dict(zip(keys, carbs))
-    # carbs_data = calculateCarbs(pointCloudFile)
+    carbs_data = calculate_carbs(imgFile, detections, boxes)
+    foodData = dict(zip(keys, carbs_data))
     detection_images = get_detection_crops(detections, boxes, imgFile)
     
     return labelled_img, detection_images, foodData
+
+def calculate_carbs(imgFile, detections, boxes):
+    carb_list = []
+    for d in range(0, len(detections)):
+        volume = calculate_volume(imgFile, boxes[d], markerSizeCM)
+        carbs = get_carbs_from_volume(volume, detections[d])
+        carb_list.append(carbs)
+    return carb_list
+
+
+
+def detect_aruco_marker(image, marker_length):
+    aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
+    parameters = cv2.aruco.DetectorParameters()
+    detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
+
+    corners, ids, _ = detector.detectMarkers(image)
+
+    if ids is not None and len(corners) > 0:
+        marker_width_pixels = np.linalg.norm(corners[0][0][0] - corners[0][0][1])
+        print("Marker width in pixels: " + str(marker_width_pixels), flush=True)
+        pixel_to_real = marker_length / marker_width_pixels
+        print("Pixel to real: " + str(pixel_to_real), flush=True)
+        return pixel_to_real
+    return None
+
+def calculate_volume(foodPath, box, markerLength):
+
+    foodImg = cv2.imread(foodPath)
+    pixel_to_real = detect_aruco_marker(foodImg, markerLength)
+    if pixel_to_real is None:
+        raise ValueError("ArUco marker not detected.")
+    
+    x_min, y_min, width, height = box
+    real_width = width * pixel_to_real
+    real_height = height * pixel_to_real
+    print("Real width: " + str(real_width), flush=True)
+    print("Real height: " + str(real_height), flush=True)
+    real_depth = min(real_width, real_height) * 0.5  # Assumption: food is roughly cuboid
+    print("Estimated depth: " + str(real_depth), flush=True)
+    # Calculate volume (assuming a cuboid shape)
+    volume = real_width * real_height * real_depth
+
+    return volume
+
+
+
+    # pointcloud = "./upload/point_cloud.xyz"
+    # if not os.path.exists(pointcloud) or os.path.getsize(pointcloud) == 0:
+    #     raise FileNotFoundError(f"Point cloud file '{pointcloud}' is empty or does not exist.")
+    # points = np.loadtxt(pointcloud, delimiter=' ')
+    # # Extract bounding box parameters
+    # x_min, y_min, w, h = box
+    # x_max, y_max = x_min + w, y_min + h
+    
+    # # Filter points inside the bounding box
+    # filtered_points = points[
+    #     (points[:, 0] >= x_min) & (points[:, 0] <= x_max) &
+    #     (points[:, 1] >= y_min) & (points[:, 1] <= y_max)
+    # ]
+    
+    # if filtered_points.shape[0] < 4:
+    #     raise ValueError("Not enough points in the selected bounding box to compute volume.")
+    
+    # # Compute convex hull volume
+    # hull = scipy.spatial.ConvexHull(filtered_points)
+    # volume = hull.volume
+    
+    # return volume
+
+def get_carbs_from_volume(volume, detection):
+    return round(volume, 2) #Placeholder for now
+
 
 def get_detection_crops(detections, boxes, imgFile):
     mainImg = cv2.imread(imgFile) #cv2.imread("mainImg.png")

@@ -28,7 +28,7 @@ class YoloV2:
 
         # Process detections
         conf_threshold = 0  # Confidence threshold
-        nms_threshold = 0.5   # Non-Maximum Suppression threshold
+        nms_threshold = 0.2   # Non-Maximum Suppression threshold
 
         boxes = []
         confidences = []
