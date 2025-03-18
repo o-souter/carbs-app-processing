@@ -1,6 +1,6 @@
-rice, 0.1
-eels-on-rice, 0.1
-pilaf, 0.1
+rice, 0.302
+eels-on-rice, 0.241
+pilaf, 0.221
 chicken-n-egg-on-rice, 0.1
 pork-cutlet-on-rice, 0.1
 beef-curry, 0.1

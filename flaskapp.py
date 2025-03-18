@@ -6,15 +6,31 @@ import cv2
 import subprocess
 import numpy as np
 import scipy
+import pandas as pd
 
 # from food_image_processing import food_detection
 from food_image_processing import yolov2
 app = flask.Flask(__name__)
-uploadDir = "upload"#
+uploadDir = "upload"
 
 markerSizeCM = 6
 
 yolov2_model = yolov2.YoloV2
+
+#Set up volume to mass, mass to carb dictionaries
+
+with open("volume_estimation\\vol_to_mass.txt", "r") as file:
+    vol_to_mass_dict = {line.split(",")[0].strip(): float(line.split(",")[1].strip()) for line in file}
+
+with open("volume_estimation\\mass_to_carbs.txt", "r") as file:
+    mass_to_carbs_dict = {line.split(",")[0].strip(): float(line.split(",")[1].strip()) for line in file}
+
+
+print("Volume to Mass dictionary: \n" + str(vol_to_mass_dict), flush=True)
+
+print("Mass to Carbs Dictionary: \n" + str(mass_to_carbs_dict), flush=True)
+
+
 
 @app.route("/test", methods=['GET'])
 def handle_call():
@@ -145,7 +161,13 @@ def calculate_volume(foodPath, box, markerLength):
     # return volume
 
 def get_carbs_from_volume(volume, detection):
-    return round(volume, 2) #Placeholder for now
+    mass = get_mass_from_vol(volume, detection)
+    carbs = mass_to_carbs_dict[detection] * mass
+    return round(carbs, 2) #Placeholder for now
+
+def get_mass_from_vol(volume, detection):
+    return vol_to_mass_dict[detection] * volume
+    
 
 
 def get_detection_crops(detections, boxes, imgFile):
@@ -225,7 +247,7 @@ def get_git_commit_count():
 
 if __name__ == '__main__':
     # clearUploadDir()
-    version = "0.2." + str(get_git_commit_count())
+    version = "0.3." + str(get_git_commit_count())
     print("-------------------------------------------------")
     print("\nC.A.R.B.S Processing backend v" + version + "\n")
     app.run(host="0.0.0.0")#, debug=True)
