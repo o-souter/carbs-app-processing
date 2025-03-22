@@ -154,7 +154,7 @@ def calculate_volume(foodPath, box, markerLength):
     if pixel_to_real is None:
         # raise ValueError("ArUco marker not detected.")
         pixel_to_real = 0.01
-        markerFound = False
+        markerFound = False #TODO add feedback here to alert user a marker wasnt found
         print("Warning: No fiducial marker detected. Using default scaling.", flush=True)
     
     x_min, y_min, width, height = box
