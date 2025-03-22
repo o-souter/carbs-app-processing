@@ -28,11 +28,11 @@ with open("volume_estimation\\mass_to_carbs.txt", "r") as file:
     mass_to_carbs_dict = {line.split(",")[0].strip(): float(line.split(",")[1].strip()) for line in file}
 
 
-print("Volume to Mass dictionary: \n" + str(vol_to_mass_dict), flush=True)
+# print("Volume to Mass dictionary: \n" + str(vol_to_mass_dict), flush=True)
 
-print("Mass to Carbs Dictionary: \n" + str(mass_to_carbs_dict), flush=True)
+# print("Mass to Carbs Dictionary: \n" + str(mass_to_carbs_dict), flush=True)
 
-
+food_class_file_path = "food_image_processing\\food100.names"
 
 @app.route("/test", methods=['GET'])
 def handle_call():
@@ -74,6 +74,14 @@ def store_data():
     mainImg, foodImages, foodData = run_carbs_algo(imgFilePathToSave, pointFilePathToSave)
     return createResponseZip("Image and pointcloud recieved and stored successfully", mainImg, foodImages, foodData)
 
+
+@app.route("/get-food-classes", methods=['GET'])
+def get_food_classes():
+    print("Received request for all food item classes", flush=True)
+    with open(food_class_file_path, "r") as file:
+        classes = file.read().splitlines()
+    return  " ".join(classes)
+    
 
 #{"message": "Image and pointcloud recieved and stored successfully", "filenames":[image.filename, pointcloud.filename]}
 
@@ -270,6 +278,8 @@ def get_git_commit_count():
         return int(result.stdout.strip())
     except subprocess.CalledProcessError:
         return "?"  # In case git fails
+
+
 
 if __name__ == '__main__':
     # clearUploadDir()
