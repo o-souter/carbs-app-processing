@@ -49,7 +49,7 @@ class YoloV2:
                     y = int(center_y - (h / 2))
 
                     boxes.append([x, y, w, h])
-                    confidences.append(float(confidence))
+                    confidences.append(float(round(confidence, 2)))
                     class_ids.append(class_id)
         indices = cv2.dnn.NMSBoxes(boxes, confidences, conf_threshold, nms_threshold)
         # Check if indices is not empty and is a NumPy array
@@ -77,4 +77,4 @@ class YoloV2:
         cv2.waitKey(5)
         cv2.destroyAllWindows()
         cv2.imwrite("mainImg.png", image)
-        return "mainImg.png", detections
+        return "mainImg.png", detections, confidences

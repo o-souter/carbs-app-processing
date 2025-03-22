@@ -14,7 +14,7 @@ croissant, 0.1
 roll-bread, 0.1
 raisin-bread, 0.1
 chip-butty, 0.1
-hamburger, 0.1
+hamburger, 0.3
 pizza, 0.1
 sandwiches, 0.1
 udon-noodle, 0.1

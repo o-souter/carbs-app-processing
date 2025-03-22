@@ -6,7 +6,7 @@ import cv2
 import subprocess
 import numpy as np
 import scipy
-import pandas as pd
+# import pandas as pd
 
 # from food_image_processing import food_detection
 from food_image_processing import yolov2
@@ -14,6 +14,8 @@ app = flask.Flask(__name__)
 uploadDir = "upload"
 
 markerSizeCM = 6
+
+markerFound = True
 
 yolov2_model = yolov2.YoloV2
 
@@ -83,23 +85,45 @@ def run_carbs_algo(imgFile, pointCloudFile):
     labelled_img = processedImage[0]
     detections = [item[0] for item in processedImage[1]]# processedImage[1]
     boxes = [item[1] for item in processedImage[1]]
+    confidences = processedImage[2]
     # carbs = np.full(shape=len(detections), fill_value=50, dtype=np.double) #np.zeros_like(detections, float)
     keys = tuple(detections)
-    carbs_data = calculate_carbs(imgFile, detections, boxes)
-    foodData = dict(zip(keys, carbs_data))
+    carbs_data, volume_data, weight_data = calculate_carbs(imgFile, detections, boxes)
+    foodData = dict(zip(keys, zip(carbs_data, confidences, volume_data, weight_data)))
     detection_images = get_detection_crops(detections, boxes, imgFile)
     
     return labelled_img, detection_images, foodData
 
 def calculate_carbs(imgFile, detections, boxes):
     carb_list = []
+    volume_list = []
+    weight_list = []
+
     for d in range(0, len(detections)):
+        print("\nCalculating carbs for: " + detections[d])
         volume = calculate_volume(imgFile, boxes[d], markerSizeCM)
-        carbs = get_carbs_from_volume(volume, detections[d])
-        carb_list.append(carbs)
-    return carb_list
+        weight = get_mass_from_vol(volume, detections[d])
+        carbs = get_carbs_from_weight(weight, detections[d])
+
+        volume_list.append(round(volume, 2))
+        weight_list.append(round(weight, 2))
+        carb_list.append(round(carbs, 2))
+    return carb_list, volume_list, weight_list
 
 
+
+# def get_carbs_from_volume(volume, detection):
+#     mass = get_mass_from_vol(volume, detection)
+#     print("Estimated mass/weight: " + str(mass) + "g")
+#     carbs = round(mass_to_carbs_dict[detection] * mass, 2)
+#     print("Estimated Carbohydrates: " + str(carbs) + "g")
+#     return carbs 
+
+
+def get_carbs_from_weight(weight, detection):
+    carbs = mass_to_carbs_dict[detection] * weight
+    print("Estimated Carbohydrates: " + str(carbs) + "g")
+    return carbs
 
 def detect_aruco_marker(image, marker_length):
     aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
@@ -117,22 +141,24 @@ def detect_aruco_marker(image, marker_length):
     return None
 
 def calculate_volume(foodPath, box, markerLength):
-
     foodImg = cv2.imread(foodPath)
     pixel_to_real = detect_aruco_marker(foodImg, markerLength)
     if pixel_to_real is None:
-        raise ValueError("ArUco marker not detected.")
+        # raise ValueError("ArUco marker not detected.")
+        pixel_to_real = 0.01
+        markerFound = False
+        print("Warning: No fiducial marker detected. Using default scaling.", flush=True)
     
     x_min, y_min, width, height = box
     real_width = width * pixel_to_real
     real_height = height * pixel_to_real
-    print("Real width: " + str(real_width), flush=True)
-    print("Real height: " + str(real_height), flush=True)
+    print("Estimated width: " + str(real_width) + "cm", flush=True)
+    print("Estimated height: " + str(real_height) + "cm", flush=True)
     real_depth = min(real_width, real_height) * 0.5  # Assumption: food is roughly cuboid
-    print("Estimated depth: " + str(real_depth), flush=True)
+    print("Estimated depth: " + str(real_depth) + "cm", flush=True)
     # Calculate volume (assuming a cuboid shape)
     volume = real_width * real_height * real_depth
-
+    print("Estimated volume: " + str(volume) + "cm^3")
     return volume
 
 
@@ -160,14 +186,10 @@ def calculate_volume(foodPath, box, markerLength):
     
     # return volume
 
-def get_carbs_from_volume(volume, detection):
-    mass = get_mass_from_vol(volume, detection)
-    carbs = mass_to_carbs_dict[detection] * mass
-    return round(carbs, 2) #Placeholder for now
+
 
 def get_mass_from_vol(volume, detection):
     return vol_to_mass_dict[detection] * volume
-    
 
 
 def get_detection_crops(detections, boxes, imgFile):
@@ -199,10 +221,10 @@ def createResponseZip(message, mainImg, foodImages, foodData):
 
         with open("foodData.txt", "w") as info_file:
             info_file.write(f"Message: {message}\n")
-
-            for item, carbs in foodData.items():
+            idx = 0
+            for key, value in foodData.items():
                 # info_file.write(f"Food data: \n{foodData}")
-                info_file.write(item + ":" + str(carbs))
+                info_file.write(key + ":" + str(value))
 
         zipf.write("foodData.txt")
 
@@ -228,8 +250,12 @@ def processImage(imgFilePath):
     analysis = yolov2_model.analyse_image(imgFilePath)
     labelled_img = analysis[0]
     detections = analysis[1]
+    if len(detections) > 0:
+        confidences = analysis[2]
+    else:
+        confidences = [0.0]
     
-    return labelled_img, detections
+    return labelled_img, detections, confidences
 
 def get_git_commit_count():
     try:
