@@ -1,2 +1,2 @@
 Message: Image and pointcloud recieved and stored successfully
-hamburger:(60.15, 0.8600000143051147, 1179.44, 200.5)
+sushi:(627.8, 0.7300000190734863, 4214.55, 2360.15)

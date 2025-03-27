@@ -6,14 +6,16 @@ import cv2
 import subprocess
 import numpy as np
 import scipy
+import random
 # import pandas as pd
 
 # from food_image_processing import food_detection
 from food_image_processing import yolov2
 app = flask.Flask(__name__)
 uploadDir = "upload"
+augmentationDir = "augmentations"
 
-markerSizeCM = 6
+markerSizeCM = 5
 
 markerFound = True
 
@@ -89,6 +91,8 @@ def get_food_classes():
 
 def run_carbs_algo(imgFile, pointCloudFile):
     # foodData = "Not implemented yet!"
+    augment_image(imgFile, "augmentations")
+    
     processedImage = processImage(imgFile)
     labelled_img = processedImage[0]
     detections = [item[0] for item in processedImage[1]]# processedImage[1]
@@ -99,6 +103,7 @@ def run_carbs_algo(imgFile, pointCloudFile):
     carbs_data, volume_data, weight_data = calculate_carbs(imgFile, detections, boxes)
     foodData = dict(zip(keys, zip(carbs_data, confidences, volume_data, weight_data)))
     detection_images = get_detection_crops(detections, boxes, imgFile)
+    
     
     return labelled_img, detection_images, foodData
 
@@ -148,6 +153,88 @@ def detect_aruco_marker(image, marker_length):
         return pixel_to_real
     return None
 
+
+#Image Augmentation
+def random_crop(image, crop_size=(200, 200)):
+    """ Randomly crops the image to a given size """
+    h, w = image.shape[:2]
+    ch, cw = crop_size
+
+    if ch > h or cw > w:
+        raise ValueError("Crop size should be smaller than the original image size")
+
+    x = random.randint(0, w - cw)
+    y = random.randint(0, h - ch)
+
+    return image[y:y+ch, x:x+cw]
+
+def grid_crop(image, crop_size, step_x, step_y):
+    """ 
+    Crops the image systematically from left to right, top to bottom.
+    `crop_size`: Tuple (width, height) defining crop dimensions.
+    `step_x`: Horizontal step size (move right by this many pixels).
+    `step_y`: Vertical step size (move down by this many pixels).
+    """
+    h, w = image.shape[:2]
+    crop_w, crop_h = crop_size
+    cropped_images = []
+    
+    for y in range(0, h - crop_h + 1, step_y):
+        for x in range(0, w - crop_w + 1, step_x):
+            cropped = image[y:y+crop_h, x:x+crop_w]
+            cropped_images.append((cropped, x, y))  # Store crop with position
+
+    return cropped_images
+
+def adjust_contrast(image, alpha):
+    """ Adjusts contrast by multiplying pixels by alpha (1.0 = no change) """
+    adjusted = cv2.convertScaleAbs(image, alpha=alpha, beta=0)
+    return adjusted
+
+def rotate_image(image, angle):
+    """ Rotates the image by the given angle """
+    h, w = image.shape[:2]
+    center = (w // 2, h // 2)
+    M = cv2.getRotationMatrix2D(center, angle, 1.0)
+    rotated = cv2.warpAffine(image, M, (w, h))
+    return rotated
+
+
+def augment_image(image_path, output_dir, num_crops=20, crop_size=(1008, 1344), step_x=150, step_y=150, rotations=np.arange(0, 360, 20), contrast_levels=np.arange(0.2, 2.0, 0.2)):
+    """ Applies cropping, rotation, and contrast adjustments to create multiple images """
+    os.makedirs(output_dir, exist_ok=True)
+    clearAugmentationDir()
+    print("Augmenting Image...", flush=True)
+    image = cv2.imread(image_path)
+    if image is None:
+        print("Error: Could not read image.")
+        return
+
+    base_name = os.path.splitext(os.path.basename(image_path))[0]
+
+    # # Apply Cropping
+    # for i in range(num_crops):
+    #     cropped = random_crop(image, crop_size=(1344, 1008))
+    #     cv2.imwrite(os.path.join(output_dir, f"{base_name}_crop{i}.jpg"), cropped)
+     # Grid-based Cropping
+    cropped_images = grid_crop(image, crop_size, step_x, step_y)
+    for i, (cropped, x, y) in enumerate(cropped_images):
+        cv2.imwrite(os.path.join(output_dir, f"{base_name}_crop_{x}_{y}.jpg"), cropped)
+
+    # Apply Rotations
+    for angle in rotations:
+        rotated = rotate_image(image, angle)
+        cv2.imwrite(os.path.join(output_dir, f"{base_name}_rot{angle}.jpg"), rotated)
+
+    # Apply Contrast Adjustments
+    for level in contrast_levels:
+        contrasted = adjust_contrast(image, level)
+        cv2.imwrite(os.path.join(output_dir, f"{base_name}_contrast{level}.jpg"), contrasted)
+
+    print("Augmentation complete! Images saved to:", output_dir)
+
+
+
 def calculate_volume(foodPath, box, markerLength):
     foodImg = cv2.imread(foodPath)
     pixel_to_real = detect_aruco_marker(foodImg, markerLength)
@@ -166,6 +253,8 @@ def calculate_volume(foodPath, box, markerLength):
     print("Estimated depth: " + str(real_depth) + "cm", flush=True)
     # Calculate volume (assuming a cuboid shape)
     volume = real_width * real_height * real_depth
+    
+
     print("Estimated volume: " + str(volume) + "cm^3")
     return volume
 
@@ -197,7 +286,9 @@ def calculate_volume(foodPath, box, markerLength):
 
 
 def get_mass_from_vol(volume, detection):
-    return vol_to_mass_dict[detection] * volume
+    mass = vol_to_mass_dict[detection] * volume
+    print("Estimated weight: " + str(mass) + "g")
+    return mass
 
 
 def get_detection_crops(detections, boxes, imgFile):
@@ -252,6 +343,22 @@ def clearUploadDir():
     if len(os.listdir(uploadDir)) == 0:
         print("Successfully cleared upload directory!\n", flush=True)
 
+def clearAugmentationDir():
+    print("\nAttempting to clear augmentations directory...", flush=True)
+    
+    for filename in os.listdir(augmentationDir):
+        file_path = os.path.join(augmentationDir, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print('Failed to delete %s. Reason: %s' % (file_path, e) + "\n")
+    if len(os.listdir(augmentationDir)) == 0:
+        print("Successfully cleared augmentation directory!\n", flush=True)
+
+
 def processImage(imgFilePath):
     print("Running image processing on the following files:")
 
@@ -284,8 +391,11 @@ def get_git_commit_count():
 if __name__ == '__main__':
     # clearUploadDir()
     version = "0.3." + str(get_git_commit_count())
+    clearAugmentationDir()
+    clearUploadDir()
     print("-------------------------------------------------")
     print("\nC.A.R.B.S Processing backend v" + version + "\n")
+    
     app.run(host="0.0.0.0")#, debug=True)
     # app.run(host="192.168.1.168", port=5000)#, debug=True)
     # app.run(host="10.180.229.100", port=5000)

@@ -12,7 +12,7 @@ with open(names_path, "r") as nameFile:
 
 class YoloV2:
     def analyse_image(path):
-        analysis = ""
+        
         detections = []
         image = cv2.imread(path)
         height, width = image.shape[:2]
@@ -59,6 +59,13 @@ class YoloV2:
             indices = []  # Set to an empty list if there are no valid detections
             mainImg = cv2.imwrite("mainImg.png", image)
             return "mainImg.png", []
+        #Establish bounding box around entire image/detections
+        x_min = width
+        y_min = height
+        x_max = 0
+        y_max = 0
+
+        
 
         for i in indices:
             class_name = classes[class_ids[i]]
@@ -70,11 +77,29 @@ class YoloV2:
             label=f"{classes[class_ids[i]]}: {confidences[i]:.2f}"
             cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 40)
             cv2.putText(image, label, (x, y - 40), cv2.FONT_HERSHEY_SIMPLEX, 5, (0, 255, 0), 5)
-            # Show image
+            
+
+
+        for i in indices:
+            x, y, w, h = boxes[i]
+            x_min = min(x_min, x)
+            y_min = min(y_min, y)
+            x_max = max(x_max, x + w)
+            y_max = max(y_max, y + h)
+
+            # Expand bounding box by 200 pixels on each side
+            padding = 500
+            x_min = max(0, x_min - padding)
+            y_min = max(0, y_min - padding)
+            x_max = min(width, x_max + padding)
+            y_max = min(height, y_max + padding)
+
+            # Crop the image
+            cropped_mainImg = image[y_min:y_max, x_min:x_max]
         cv2.namedWindow("YOLOv2 Detection", cv2.WINDOW_NORMAL)  # Allow resizing
         cv2.resizeWindow("YOLOv2 Detection", 800, 600)  
-        cv2.imshow("YOLOv2 Detection", image)
+        cv2.imshow("YOLOv2 Detection", cropped_mainImg)
         cv2.waitKey(5)
         cv2.destroyAllWindows()
-        cv2.imwrite("mainImg.png", image)
+        cv2.imwrite("mainImg.png", cropped_mainImg)
         return "mainImg.png", detections, confidences
