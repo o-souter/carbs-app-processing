@@ -156,18 +156,30 @@ class YoloV2:
             cv2.rectangle(original_image, (x, y), (x + w, y + h), (0, 255, 0), 10)
             cv2.putText(original_image, class_name, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 5, (0, 255, 0), 5)
 
+            
+        # Crop image to around where detections are (with 200px padding)
+        if filtered_detections:
+            x_coords = []
+            y_coords = []
+            for _, (x, y, w, h) in filtered_detections:
+                x_coords.extend([x, x + w])
+                y_coords.extend([y, y + h])
+
+            min_x = max(min(x_coords) - 200, 0)
+            max_x = min(max(x_coords) + 200, width)
+            min_y = max(min(y_coords) - 200, 0)
+            max_y = min(max(y_coords) + 200, height)
+
+            cropped_image = original_image[min_y:max_y, min_x:max_x]
+        else:
+            cropped_image = original_image  # fallback to full image if no detections
+
         cv2.namedWindow("YOLOv2 Detection", cv2.WINDOW_NORMAL)  # Allow resizing
         cv2.resizeWindow("YOLOv2 Detection", 800, 600)  
-        cv2.imshow("YOLOv2 Detection", original_image)
+        cv2.imshow("YOLOv2 Detection", cropped_image)
         cv2.waitKey(5)
         cv2.destroyAllWindows()
-        cv2.imwrite("mainImg.png", original_image)
-
-        # # Save and display final image
-        # cv2.imwrite("mainImg.png", original_image)
-        # cv2.imshow("YOLOv2 Detection", original_image)
-        # cv2.waitKey(0)
-        # cv2.destroyAllWindows()
+        cv2.imwrite("mainImg.png", cropped_image)
 
         return "mainImg.png", filtered_detections, all_confidences
 

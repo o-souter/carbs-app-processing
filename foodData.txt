@@ -1,3 +1,2 @@
-Message: Image and pointcloud recieved and stored successfully. MarkerFound=False
-hamburger_7:(31.82, 0.9043850898742676, 353.57, 106.07)
-cold-tofu:(4.63, 0.7589191794395447, 416.55, 420.71)
+Message: Image and pointcloud recieved and stored successfully. MarkerFound=True
+hamburger_5:(287.39, 0.7888009548187256, 3193.27, 957.98)
