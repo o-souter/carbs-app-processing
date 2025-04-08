@@ -8,6 +8,9 @@ weights_path = """food_image_processing/yolov2-food100.weights"""
 names_path = """food_image_processing/food100.names"""
 
 net = cv2.dnn.readNetFromDarknet(cfg_path, weights_path)
+layer_names = net.getLayerNames()
+output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers()]
+
 
 with open(names_path, "r") as nameFile:
     classes = [line.strip() for line in nameFile.readlines()]
@@ -18,7 +21,7 @@ def get_unique_detection_id(all_detections, detection, count=1):
         if detection not in existing_ids:
             return detection
         
-        new_id = f"{detection}_{count}" if "_" not in detection else f"{detection.rsplit("_", 1)[0]}_{count}"
+        new_id = f"{detection}_{count}" if "_" not in detection else f"{detection.rsplit('_', 1)[0]}_{count}"
         # Recurse if the new ID also exists
         return get_unique_detection_id(new_id, all_detections, count + 1)
 
@@ -30,8 +33,6 @@ class YoloV2:
         blob = cv2.dnn.blobFromImage(image, scalefactor=1/255.0, size=(416, 416), swapRB=True, crop=False)
         net.setInput(blob)
 
-        layer_names = net.getLayerNames()
-        output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers()]
         outputs = net.forward(output_layers)
 
         conf_threshold = 0.75  # Confidence threshold
@@ -107,25 +108,13 @@ class YoloV2:
         print("Augmenting image...")
         vertical_crops = (height - segment_size) // step + 1
         horizontal_crops = (width - segment_size) // step + 1
-        total_crops = vertical_crops * horizontal_crops# * 4
+        total_crops = vertical_crops * horizontal_crops # * 4
         print("With image resolution, this will apply", total_crops, "augmentations.")
-        #Segment and rotate the input and process 
+        #Segment the input and process 
 
         for y in tqdm(range(0, height - segment_size + 1, step)):
             for x in range(0, width - segment_size + 1, step):
                 segment = original_image[y:y+segment_size, x:x+segment_size]
-
-                # #Apply rotations
-                # for angle in [0, 90, 180, 270]:
-                #     if angle == 0:
-                #         rotated_segment = segment
-                #     elif angle == 90:
-                #         rotated_segment = cv2.rotate(segment, cv2.ROTATE_90_CLOCKWISE)
-                #     elif angle == 180:
-                #         rotated_segment = cv2.rotate(segment, cv2.ROTATE_180)
-                #     elif angle == 270:
-                #         rotated_segment = cv2.rotate(segment, cv2.ROTATE_90_COUNTERCLOCKWISE)
-                    
                 #Run yolov2 and collect detections
                 detections = YoloV2.process_image(segment)
 
@@ -143,16 +132,12 @@ class YoloV2:
                     all_confidences.append(confidence)
 
         #Filter out duplicates/overlaps
-        print("Detected: " + str(all_detections))
-
+        # print("Detected: " + str(all_detections))
         filtered_detections = filter_overlapping_boxes(all_detections, all_confidences, width, height)
 
         #Draw detections on the image
         for class_name, box in filtered_detections:
             x, y, w, h = box
-            # detection_names = [sublist[0] for sublist in filtered_detections]
-            # label = generate_unique_label(class_name, detection_names)# {confidence:.2f}"
-            # unique_detection_names.append(label)
             cv2.rectangle(original_image, (x, y), (x + w, y + h), (0, 255, 0), 10)
             cv2.putText(original_image, class_name, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 5, (0, 255, 0), 5)
 
@@ -335,37 +320,37 @@ def filter_overlapping_boxes(all_detections, all_confidences, image_width, image
     return [(c, b) for c, b, _ in final_merged]
 
 
-def compute_iou(box1, box2):
-    """Computes IoU (Intersection over Union) between two bounding boxes."""
-    x1, y1, w1, h1 = box1
-    x2, y2, w2, h2 = box2
+# def compute_iou(box1, box2):
+#     """Computes IoU (Intersection over Union) between two bounding boxes."""
+#     x1, y1, w1, h1 = box1
+#     x2, y2, w2, h2 = box2
 
-    # Compute intersection
-    xi1 = max(x1, x2)
-    yi1 = max(y1, y2)
-    xi2 = min(x1 + w1, x2 + w2)
-    yi2 = min(y1 + h1, y2 + h2)
+#     # Compute intersection
+#     xi1 = max(x1, x2)
+#     yi1 = max(y1, y2)
+#     xi2 = min(x1 + w1, x2 + w2)
+#     yi2 = min(y1 + h1, y2 + h2)
     
-    inter_width = max(0, xi2 - xi1)
-    inter_height = max(0, yi2 - yi1)
-    intersection = inter_width * inter_height
+#     inter_width = max(0, xi2 - xi1)
+#     inter_height = max(0, yi2 - yi1)
+#     intersection = inter_width * inter_height
 
-    # Compute union
-    area1 = w1 * h1
-    area2 = w2 * h2
-    union = area1 + area2 - intersection
+#     # Compute union
+#     area1 = w1 * h1
+#     area2 = w2 * h2
+#     union = area1 + area2 - intersection
 
-    # Avoid division by zero
-    return intersection / union if union > 0 else 0
+#     # Avoid division by zero
+#     return intersection / union if union > 0 else 0
 
 
-def is_box_inside(inner, outer):
-    """Checks if the inner box is completely inside the outer box."""
-    ix, iy, iw, ih = inner
-    ox, oy, ow, oh = outer
+# def is_box_inside(inner, outer):
+#     """Checks if the inner box is completely inside the outer box."""
+#     ix, iy, iw, ih = inner
+#     ox, oy, ow, oh = outer
     
-    # Check if the inner box is within the outer box bounds
-    return ix >= ox and iy >= oy and ix + iw <= ox + ow and iy + ih <= oy + oh
+#     # Check if the inner box is within the outer box bounds
+#     return ix >= ox and iy >= oy and ix + iw <= ox + ow and iy + ih <= oy + oh
 
     # def analyse_image(path):
     #     detections = []

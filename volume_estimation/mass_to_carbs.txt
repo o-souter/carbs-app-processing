@@ -1,7 +1,7 @@
 rice, 0.302
 eels-on-rice, 0.241
 pilaf, 0.221
-chicken-n-egg-on-rice, 0.209
+chicken-and-egg-on-rice, 0.209
 pork-cutlet-on-rice, 0.209
 beef-curry, 0.05
 sushi, 0.266
@@ -46,7 +46,7 @@ fried-fish, 0.009
 grilled-salmon, 0
 salmon-meuniere, 0.11
 sashimi, 0.006
-grilled-pacific-saury-, 0.003
+grilled-pacific-saury, 0.003
 sukiyaki, 0.24
 sweet-and-sour-pork, 0.43
 lightly-roasted-fish, 0.009
@@ -57,7 +57,7 @@ sirloin-cutlet, 0.005
 nanbanzuke, 0.009
 boiled-fish, 0.009
 seasoned-beef-with-potatoes, 0.121
-hambarg-steak, 0.0542
+hamburg-steak, 0.0542
 beef-steak, 0.005
 dried-fish, 0.009
 ginger-pork-saute, 0.003
@@ -75,8 +75,8 @@ simmered-pork, 0.003
 boiled-chicken-and-vegetables, 0.005
 sashimi-bowl, 0.006
 sushi-bowl, 0.266
-fish-shaped-pancake-with-bean-jam, 0.5
-shrimp-with-chill-source, 0.005
+pancake, 0.5
+shrimp-with-chilli-sauce, 0.005
 roast-chicken, 0.005
 steamed-meat-dumpling, 0.2
 omelet-with-fried-rice, 0.1

@@ -1,2 +1,1 @@
-Message: Image and pointcloud recieved and stored successfully. MarkerFound=True
-hamburger_5:(287.39, 0.7888009548187256, 3193.27, 957.98)
+Message: Image and pointcloud recieved and stored successfully. MarkerFound=False

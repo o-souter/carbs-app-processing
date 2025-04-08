@@ -8,6 +8,7 @@ import numpy as np
 import scipy
 import random
 import re
+import math
 # import pandas as pd
 from flask_cors import CORS
 
@@ -109,6 +110,13 @@ def run_carbs_algo(imgFile, pointCloudFile):
     # carbs = np.full(shape=len(detections), fill_value=50, dtype=np.double) #np.zeros_like(detections, float)
     keys = tuple(detections)
     carbs_data, volume_data, weight_data = calculate_carbs(imgFile, detections, boxes)
+    #Maintain the same DP
+    # carbs_data = [ '%.2f' % elem for elem in carbs_data ]
+    # volume_data = [ '%.2f' % elem for elem in volume_data ]
+    # weight_data = [ '%.2f' % elem for elem in weight_data ]
+
+
+
     foodData = dict(zip(keys, zip(carbs_data, confidences, volume_data, weight_data)))
     detection_images = get_detection_crops(detections, boxes, imgFile)
     
@@ -123,6 +131,8 @@ def calculate_carbs(imgFile, detections, boxes):
     for d in range(0, len(detections)):
         detection = detections[d]
         print("\nCalculating carbs for: " + str(detection))
+        #TODO add edge detection to improve 3D shaping of food here
+
         volume = calculate_volume(imgFile, boxes[d], markerSizeCM)
         weight = get_mass_from_vol(volume, detection)
         carbs = get_carbs_from_weight(weight, detection)
@@ -250,6 +260,7 @@ def augment_image(image_path, output_dir, num_crops=20, crop_size=(1008, 1344), 
     print("Augmentation complete! Images saved to:", output_dir)
 
 
+vol_accurate_threshold = 7
 
 def calculate_volume(foodPath, box, markerLength):
     foodImg = cv2.imread(foodPath)
@@ -258,7 +269,7 @@ def calculate_volume(foodPath, box, markerLength):
     if pixel_to_real is None:
         # raise ValueError("ArUco marker not detected.")
         pixel_to_real = 0.01
-        markerFound = False #TODO add feedback here to alert user a marker wasnt found
+        markerFound = False  # TODO add feedback here to alert user a marker wasn't found
         print("Warning: No fiducial marker detected. Using default scaling.", flush=True)
     else:
         markerFound = True
@@ -266,17 +277,79 @@ def calculate_volume(foodPath, box, markerLength):
     x_min, y_min, width, height = box
     real_width = width * pixel_to_real
     real_height = height * pixel_to_real
-    print("Estimated width: " + str(real_width) + "cm", flush=True)
-    print("Estimated height: " + str(real_height) + "cm", flush=True)
-    real_depth = min(real_width, real_height) * 0.5  # Assumption: food is roughly cuboid
-    print("Estimated depth: " + str(real_depth) + "cm", flush=True)
-    # Calculate volume (assuming a cuboid shape)
-    volume = real_width * real_height * real_depth
+    real_depth = min(real_width, real_height) * 0.5
+    return real_width * real_height * real_depth
+    # Extend the bounding box by 50px in each direction
+    padding = 50
+    x_min_extended = max(0, x_min - padding)  # Ensure we don't go below 0
+    y_min_extended = max(0, y_min - padding)  # Ensure we don't go below 0
+    width_extended = width + 2 * padding
+    height_extended = height + 2 * padding
+
+    # Crop the region with the extended bounding box
+    cropped = foodImg[y_min_extended:y_min_extended + height_extended, x_min_extended:x_min_extended + width_extended]
+
+    # Preprocess the crop
+    gray = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     
+    # Apply adaptive thresholding
+    thresh = cv2.adaptiveThreshold(gray, 255,
+                                   cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                   cv2.THRESH_BINARY_INV, 11, 2)
+    edges = thresh
+    debug_output = cropped.copy()
 
-    print("Estimated volume: " + str(volume) + "cm^3")
+    # Detect contours/edges
+    contours, _ = cv2.findContours(edges.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
+        print("No contours found. Falling back to bounding box estimation.")
+        real_width = width * pixel_to_real
+        real_height = height * pixel_to_real
+        real_depth = min(real_width, real_height) * 0.5
+        return real_width * real_height * real_depth
+
+    # Find the largest contour
+    largest_contour = max(contours, key=cv2.contourArea)
+    
+    if len(largest_contour) >= 5:
+        # Fit ellipse
+        ellipse = cv2.fitEllipse(largest_contour)
+        (center, axes, angle) = ellipse
+        major_axis = max(axes) * pixel_to_real
+        minor_axis = min(axes) * pixel_to_real
+
+        real_area = math.pi * (major_axis / 2) * (minor_axis / 2)
+        estimated_depth = min(major_axis, minor_axis) * 0.5
+        volume = real_area * estimated_depth
+
+        if volume < vol_accurate_threshold:
+            print("Below par ellipse detected. Falling back to bounding box estimation.")
+            real_width = width * pixel_to_real
+            real_height = height * pixel_to_real
+            real_depth = min(real_width, real_height) * 0.5
+            return real_width * real_height * real_depth
+
+        print(f"Ellipse-based area: {real_area:.2f}cm²")
+        print(f"Estimated depth: {estimated_depth:.2f}cm")
+        print(f"Estimated volume: {volume:.2f}cm³")
+
+        # Draw ellipse on debug image
+        cv2.ellipse(debug_output, ellipse, (0, 255, 0), 2)
+    else:
+        print("Not enough points for ellipse fitting. Falling back to bounding box.")
+        real_width = width * pixel_to_real
+        real_height = height * pixel_to_real
+        real_depth = min(real_width, real_height) * 0.5
+        return real_width * real_height * real_depth
+
+    # Show debug images
+    cv2.imshow("Cropped Image with Ellipse", debug_output)
+    cv2.imshow("Threshold", thresh)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
     return volume
-
 
 
     # pointcloud = "./upload/point_cloud.xyz"
@@ -355,7 +428,7 @@ def createResponseZip(message, mainImg, foodImages, foodData):
     return send_file(zip_filename, as_attachment=True)
 
 def clearUploadDir():
-    print("\nAttempting to clear upload directory...", flush=True)
+    # print("Attempting to clear upload directory...", flush=True)
     for filename in os.listdir(uploadDir):
         file_path = os.path.join(uploadDir, filename)
         try:
@@ -369,7 +442,7 @@ def clearUploadDir():
         print("Successfully cleared upload directory!\n", flush=True)
 
 def clearAugmentationDir():
-    print("\nAttempting to clear augmentations directory...", flush=True)
+    # print("Attempting to clear augmentations directory...", flush=True)
     
     for filename in os.listdir(augmentationDir):
         file_path = os.path.join(augmentationDir, filename)
@@ -384,7 +457,7 @@ def clearAugmentationDir():
         print("Successfully cleared augmentation directory!\n", flush=True)
 
 def clearDetectionDir():
-    print("\nAttempting to clear detections directory...", flush=True)
+    # print("Attempting to clear detections directory...", flush=True)
     
     for filename in os.listdir(detectionDir):
         file_path = os.path.join(detectionDir, filename)
@@ -396,7 +469,7 @@ def clearDetectionDir():
         except Exception as e:
             print('Failed to delete %s. Reason: %s' % (file_path, e) + "\n")
     if len(os.listdir(detectionDir)) == 0:
-        print("Successfully cleared augmentation directory!\n", flush=True)
+        print("Successfully cleared detections directory!\n", flush=True)
 
 
 def processImage(imgFilePath):
@@ -423,19 +496,18 @@ def get_git_commit_count():
             text=True
         )
         return int(result.stdout.strip())
-    except subprocess.CalledProcessError:
+    except Exception:
         return "?"  # In case git fails
 
 
 
 if __name__ == '__main__':
-    # clearUploadDir()
-    # version = "0.3." + str(get_git_commit_count())
+    version = "0.3." + str(get_git_commit_count())
     clearAugmentationDir()
     clearUploadDir()
     clearDetectionDir()
-    print("-------------------------------------------------")
-    print("\nC.A.R.B.S Processing backend v" + str(0.3) + "\n")
+    print("-" * 80)
+    print("\nC.A.R.B.S Processing backend v" + str(version) + "\n")
     
     app.run(host="0.0.0.0", port=8000)#, debug=True)
     # app.run(host="192.168.1.168", port=5000)#, debug=True)
