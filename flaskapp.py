@@ -19,6 +19,7 @@ CORS(app)
 uploadDir = "upload"
 augmentationDir = "augmentations"
 detectionDir = "detections"
+bundlingDir = "bundling"
 
 
 markerSizeCM = 5
@@ -411,19 +412,19 @@ def createResponseZip(message, mainImg, foodImages, foodData):
 
     #Create zip file and add images
     with zipfile.ZipFile(zip_filename, "w") as zipf:
-        zipf.write(mainImg)
+        zipf.write(mainImg, os.path.basename(mainImg))
 
         for img_path in foodImages:
             zipf.write(img_path, os.path.basename(img_path))
-
-        with open("foodData.txt", "w") as info_file:
+        foodDataFilePath = os.path.join(bundlingDir, "foodData.txt")
+        with open(foodDataFilePath, "w") as info_file:
             info_file.write(f"Message: {message}\n")
             idx = 0
             for key, value in foodData.items():
                 # info_file.write(f"Food data: \n{foodData}")
                 info_file.write(key + ":" + str(value)+"\n")
 
-        zipf.write("foodData.txt")
+        zipf.write(foodDataFilePath, "foodData.txt")
 
     return send_file(zip_filename, as_attachment=True)
 

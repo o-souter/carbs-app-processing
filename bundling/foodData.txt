@@ -1,0 +1,1 @@
+Message: Image and pointcloud recieved and stored successfully. MarkerFound=True

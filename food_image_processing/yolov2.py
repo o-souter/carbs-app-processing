@@ -3,9 +3,12 @@ import numpy as np
 import math
 from tqdm import tqdm
 import re
+import os
 cfg_path="""food_image_processing/yolov2-food100.cfg"""
 weights_path = """food_image_processing/yolov2-food100.weights"""
 names_path = """food_image_processing/food100.names"""
+
+bundlingDir = "bundling"
 
 net = cv2.dnn.readNetFromDarknet(cfg_path, weights_path)
 layer_names = net.getLayerNames()
@@ -164,12 +167,11 @@ class YoloV2:
         cv2.imshow("YOLOv2 Detection", cropped_image)
         cv2.waitKey(5)
         cv2.destroyAllWindows()
-        cv2.imwrite("mainImg.png", cropped_image)
+        mainImgPath = os.path.join(bundlingDir, "mainImg.png")
+        cv2.imwrite(mainImgPath, cropped_image)
 
-        return "mainImg.png", filtered_detections, all_confidences
+        return mainImgPath, filtered_detections, all_confidences
 
-
-    
 
 def generate_unique_label(base_label, existing_detections):
     existing_labels = [sublist[0] for sublist in existing_detections]
