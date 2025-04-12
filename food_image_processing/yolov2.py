@@ -4,6 +4,8 @@ import math
 from tqdm import tqdm
 import re
 import os
+from concurrent.futures import ThreadPoolExecutor
+
 cfg_path="""food_image_processing/yolov2-food100.cfg"""
 weights_path = """food_image_processing/yolov2-food100.weights"""
 names_path = """food_image_processing/food100.names"""
@@ -27,6 +29,20 @@ def get_unique_detection_id(all_detections, detection, count=1):
         new_id = f"{detection}_{count}" if "_" not in detection else f"{detection.rsplit('_', 1)[0]}_{count}"
         # Recurse if the new ID also exists
         return get_unique_detection_id(new_id, all_detections, count + 1)
+
+def process_segment(args):
+    segment, x, y, shared_existing_labels = args
+    results = []
+    detections = YoloV2.process_image(segment)
+    for class_name, box, confidence in detections:
+        angle = 0
+        adjusted_box = YoloV2.adjust_bbox_for_rotation(box, angle, segment.shape)
+        adjusted_box[0] += x
+        adjusted_box[1] += y
+        unique_class_name = generate_unique_label(class_name, shared_existing_labels)
+        shared_existing_labels.add(unique_class_name)
+        results.append((unique_class_name, adjusted_box, confidence))
+    return results
 
 class YoloV2:
     @staticmethod
@@ -87,7 +103,6 @@ class YoloV2:
             return box  # No rotation
 
         return [new_x, new_y, new_width, new_height]
-    
 
     @staticmethod
     def analyse_image(path):
@@ -107,7 +122,7 @@ class YoloV2:
             all_confidences.append(confidence)
 
         segment_size = math.ceil(width / 3)
-        step = math.ceil(width / 15)
+        step = math.ceil(width / 10)
         print("Augmenting image...")
         vertical_crops = (height - segment_size) // step + 1
         horizontal_crops = (width - segment_size) // step + 1
@@ -133,7 +148,20 @@ class YoloV2:
                     unique_class_name = generate_unique_label(class_name, all_detections)
                     all_detections.append([unique_class_name, adjusted_box])
                     all_confidences.append(confidence)
+        # shared_labels = set()
+        # tasks = []
+        # for y in range(0, height - segment_size + 1, step):
+        #     for x in range(0, width - segment_size + 1, step):
+        #         segment = original_image[y:y+segment_size, x:x+segment_size]
+        #         tasks.append((segment, x, y, shared_labels))
 
+        # with ThreadPoolExecutor() as executor:
+        #     results = executor.map(process_segment, tasks)
+
+        # for result in results:
+        #     for class_name, box, confidence in result:
+        #         all_detections.append([class_name, box])
+        #         all_confidences.append(confidence)
         #Filter out duplicates/overlaps
         # print("Detected: " + str(all_detections))
         filtered_detections = filter_overlapping_boxes(all_detections, all_confidences, width, height)
@@ -162,11 +190,11 @@ class YoloV2:
         else:
             cropped_image = original_image  # fallback to full image if no detections
 
-        cv2.namedWindow("YOLOv2 Detection", cv2.WINDOW_NORMAL)  # Allow resizing
-        cv2.resizeWindow("YOLOv2 Detection", 800, 600)  
-        cv2.imshow("YOLOv2 Detection", cropped_image)
-        cv2.waitKey(5)
-        cv2.destroyAllWindows()
+        # cv2.namedWindow("YOLOv2 Detection", cv2.WINDOW_NORMAL)  # Allow resizing
+        # cv2.resizeWindow("YOLOv2 Detection", 800, 600)  
+        # cv2.imshow("YOLOv2 Detection", cropped_image)
+        # cv2.waitKey(5)
+        # cv2.destroyAllWindows()
         mainImgPath = os.path.join(bundlingDir, "mainImg.png")
         cv2.imwrite(mainImgPath, cropped_image)
 
@@ -254,7 +282,7 @@ def filter_overlapping_boxes(all_detections, all_confidences, image_width, image
             norm1 = normalize_class_name(c1)
             norm2 = normalize_class_name(c2)
             iou = compute_iou(b1, b2)
-            print("IoU of " + c1 + " and " + c2 + " is " + str(iou))
+            # print("IoU of " + c1 + " and " + c2 + " is " + str(iou))
             if norm1 != norm2 and iou > 0.3:
                 area1 = b1[2] * b1[3]
                 area2 = b2[2] * b2[3]

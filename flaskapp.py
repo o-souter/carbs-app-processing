@@ -54,9 +54,9 @@ def store_data():
     if 'image' not in request.files:
         print("Error: recieved data upload request but request contained no image", flush=True)
         return {"error": "No image file found"}
-    if 'pointcloud' not in request.files:
-        print("Error: recieved data upload request but request contained no pointcloud file", flush=True)
-        return {"error": "No pointcloud file found"}
+    # if 'pointcloud' not in request.files:
+    #     print("Error: recieved data upload request but request contained no pointcloud file", flush=True)
+    #     return {"error": "No pointcloud file found"}
     
     image = request.files['image']
     if len(os.listdir(uploadDir)) >= 2:
@@ -71,19 +71,19 @@ def store_data():
     image.save(imgFilePathToSave)
     print("Recieved image from app capture, stored at: " + imgFilePathToSave, flush=True)
     
-    pointcloud = request.files['pointcloud']
-    pointFilePathToSave = f"./upload/{pointcloud.filename}"
-    if os.path.isfile(pointFilePathToSave):
-        newFileName = pointcloud.filename.split(".")[0] + "_1"
-        print("An existing pointcloud already exists, renaming pointcloud file")
-        pointFilePathToSave = f"./upload/{newFileName}" + ".jpg"
+    # pointcloud = request.files['pointcloud']
+    # pointFilePathToSave = f"./upload/{pointcloud.filename}"
+    # if os.path.isfile(pointFilePathToSave):
+    #     newFileName = pointcloud.filename.split(".")[0] + "_1"
+    #     print("An existing pointcloud already exists, renaming pointcloud file")
+    #     pointFilePathToSave = f"./upload/{newFileName}" + ".jpg"
     
-    pointcloud.save(pointFilePathToSave)
-    print("Recieved pointcloud from app capture, stored at: " + pointFilePathToSave, flush=True)
+    # pointcloud.save(pointFilePathToSave)
+    # print("Recieved pointcloud from app capture, stored at: " + pointFilePathToSave, flush=True)
     
     clearDetectionDir()
     
-    mainImg, foodImages, foodData = run_carbs_algo(imgFilePathToSave, pointFilePathToSave)
+    mainImg, foodImages, foodData = run_carbs_algo(imgFilePathToSave)
     return createResponseZip("Image and pointcloud recieved and stored successfully. MarkerFound=" + str(markerFound), mainImg, foodImages, foodData)
 
 
@@ -99,7 +99,7 @@ def get_food_classes():
 
 
 
-def run_carbs_algo(imgFile, pointCloudFile):
+def run_carbs_algo(imgFile):
     # foodData = "Not implemented yet!"
     # augment_image(imgFile, "augmentations")
     
@@ -345,10 +345,10 @@ def calculate_volume(foodPath, box, markerLength):
         return real_width * real_height * real_depth
 
     # Show debug images
-    cv2.imshow("Cropped Image with Ellipse", debug_output)
-    cv2.imshow("Threshold", thresh)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    # cv2.imshow("Cropped Image with Ellipse", debug_output)
+    # cv2.imshow("Threshold", thresh)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
 
     return volume
 
