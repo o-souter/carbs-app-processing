@@ -22,6 +22,8 @@ detectionDir = "detections"
 bundlingDir = "bundling"
 
 
+serverMainVersion = "1.0"
+
 markerSizeCM = 5
 
 markerFound = True
@@ -496,14 +498,28 @@ def get_git_commit_count():
             check=True,
             text=True
         )
-        return int(result.stdout.strip())
+        return "." + str(int(result.stdout.strip()))
     except Exception:
-        return "?"  # In case git fails
+        return None  # In case git fails
 
+
+def get_version_number():
+    commits = get_git_commit_count()
+    if commits is not None:
+        versionNumber = serverMainVersion + commits
+        details = open("server_details.txt", "w")
+        details.writelines(["Version: " + versionNumber])
+        print("Attached to git, fetching version number.")
+        return versionNumber
+    else:
+        print("Not attached to git, using local versioning.")
+        details = open("server_details.txt", "r")
+        versionNumber = details.readline().split(":")[1].strip(" ")
+        return versionNumber
 
 
 if __name__ == '__main__':
-    version = "0.3." + str(get_git_commit_count())
+    version = get_version_number()
     clearAugmentationDir()
     clearUploadDir()
     clearDetectionDir()
