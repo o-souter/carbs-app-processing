@@ -104,18 +104,39 @@ class YoloV2:
 
         return [new_x, new_y, new_width, new_height]
 
+    # @staticmethod
+    # def runYoloAndGetDetections(segment):
+    #     detections = YoloV2.process_image(segment)
+    #     for class_name, box, confidence in detections:
+    #         # Adjust bounding box from rotated segment back to the original image
+    #         angle = 0
+    #         adjusted_box = YoloV2.adjust_bbox_for_rotation(box, angle, segment.shape)
+    #         # Offset it to match original image coordinates
+    #         adjusted_box[0] += x
+    #         adjusted_box[1] += y
+    #         # all_detections.append([get_unique_detection_id(all_detections, class_name), adjusted_box])
+    #         unique_class_name = generate_unique_label(class_name, all_detections)
+    #         all_detections.append([unique_class_name, adjusted_box])
+    #         all_confidences.append(confidence)
+
+
+    #     return all_detections, all_confidences
+
     @staticmethod
     def analyse_image(path):
         """Analyses the image, returns detections, handles applying augmentations
         THIS IS THE MAIN METHOD TO USE FOR IMAGE ANALYSIS
         """
         print("Analysing image...")
-        original_image = cv2.imread(path)
+        original_image =  cv2.imread(path)
         height, width = original_image.shape[:2]
 
         all_detections = []
         all_confidences = []
         #First run on the initial image
+
+        # detections, confidences = YoloV2.runYoloAndGetDetections(original_image)
+
         detections = YoloV2.process_image(original_image)
         for class_name, box, confidence in detections:
             all_detections.append([class_name, box])
@@ -126,7 +147,7 @@ class YoloV2:
         print("Augmenting image...")
         vertical_crops = (height - segment_size) // step + 1
         horizontal_crops = (width - segment_size) // step + 1
-        total_crops = vertical_crops * horizontal_crops # * 4
+        total_crops = vertical_crops * horizontal_crops  * 2
         print("With image resolution, this will apply", total_crops, "augmentations.")
         #Segment the input and process 
 
@@ -135,12 +156,10 @@ class YoloV2:
                 segment = original_image[y:y+segment_size, x:x+segment_size]
                 #Run yolov2 and collect detections
                 detections = YoloV2.process_image(segment)
-
                 for class_name, box, confidence in detections:
                     # Adjust bounding box from rotated segment back to the original image
                     angle = 0
                     adjusted_box = YoloV2.adjust_bbox_for_rotation(box, angle, segment.shape)
-
                     # Offset it to match original image coordinates
                     adjusted_box[0] += x
                     adjusted_box[1] += y
@@ -148,22 +167,11 @@ class YoloV2:
                     unique_class_name = generate_unique_label(class_name, all_detections)
                     all_detections.append([unique_class_name, adjusted_box])
                     all_confidences.append(confidence)
-        # shared_labels = set()
-        # tasks = []
-        # for y in range(0, height - segment_size + 1, step):
-        #     for x in range(0, width - segment_size + 1, step):
-        #         segment = original_image[y:y+segment_size, x:x+segment_size]
-        #         tasks.append((segment, x, y, shared_labels))
 
-        # with ThreadPoolExecutor() as executor:
-        #     results = executor.map(process_segment, tasks)
+                
 
-        # for result in results:
-        #     for class_name, box, confidence in result:
-        #         all_detections.append([class_name, box])
-        #         all_confidences.append(confidence)
-        #Filter out duplicates/overlaps
-        # print("Detected: " + str(all_detections))
+                
+
         filtered_detections = filter_overlapping_boxes(all_detections, all_confidences, width, height)
 
         #Draw detections on the image
@@ -200,6 +208,8 @@ class YoloV2:
 
         return mainImgPath, filtered_detections, all_confidences
 
+
+    
 
 def generate_unique_label(base_label, existing_detections):
     existing_labels = [sublist[0] for sublist in existing_detections]
@@ -349,127 +359,3 @@ def filter_overlapping_boxes(all_detections, all_confidences, image_width, image
 
     return [(c, b) for c, b, _ in final_merged]
 
-
-# def compute_iou(box1, box2):
-#     """Computes IoU (Intersection over Union) between two bounding boxes."""
-#     x1, y1, w1, h1 = box1
-#     x2, y2, w2, h2 = box2
-
-#     # Compute intersection
-#     xi1 = max(x1, x2)
-#     yi1 = max(y1, y2)
-#     xi2 = min(x1 + w1, x2 + w2)
-#     yi2 = min(y1 + h1, y2 + h2)
-    
-#     inter_width = max(0, xi2 - xi1)
-#     inter_height = max(0, yi2 - yi1)
-#     intersection = inter_width * inter_height
-
-#     # Compute union
-#     area1 = w1 * h1
-#     area2 = w2 * h2
-#     union = area1 + area2 - intersection
-
-#     # Avoid division by zero
-#     return intersection / union if union > 0 else 0
-
-
-# def is_box_inside(inner, outer):
-#     """Checks if the inner box is completely inside the outer box."""
-#     ix, iy, iw, ih = inner
-#     ox, oy, ow, oh = outer
-    
-#     # Check if the inner box is within the outer box bounds
-#     return ix >= ox and iy >= oy and ix + iw <= ox + ow and iy + ih <= oy + oh
-
-    # def analyse_image(path):
-    #     detections = []
-    #     image = cv2.imread(path)
-    #     height, width = image.shape[:2]
-    #     # Convert image to blob format
-    #     blob = cv2.dnn.blobFromImage(image, scalefactor=1/255.0, size=(416, 416), swapRB=True, crop=False)
-    #     net.setInput(blob)
-    #     # Get output layer names
-    #     layer_names = net.getLayerNames()
-    #     output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers()]
-
-    #     # Perform forward pass
-    #     outputs = net.forward(output_layers)
-
-    #     # Process detections
-    #     conf_threshold = 0  # Confidence threshold
-    #     nms_threshold = 0.2   # Non-Maximum Suppression threshold
-
-    #     boxes = []
-    #     confidences = []
-    #     class_ids = []
-
-    #     for output in outputs:
-    #         for detection in output:
-    #             scores = detection[5:]  # Class scores start from index 5
-    #             class_id = np.argmax(scores)
-    #             confidence = scores[class_id]
-
-    #             if confidence > conf_threshold:
-    #                 # YOLOv2 outputs center x, center y, width, height as a percentage of image size
-    #                 center_x, center_y, w, h = (detection[0:4] * np.array([width, height, width, height])).astype("int")
-
-    #                 # Convert to top-left corner format
-    #                 x = int(center_x - (w / 2))
-    #                 y = int(center_y - (h / 2))
-
-    #                 boxes.append([x, y, w, h])
-    #                 confidences.append(float(round(confidence, 2)))
-    #                 class_ids.append(class_id)
-    #     indices = cv2.dnn.NMSBoxes(boxes, confidences, conf_threshold, nms_threshold)
-    #     # Check if indices is not empty and is a NumPy array
-    #     if len(indices) > 0 and isinstance(indices, np.ndarray):
-    #         indices = indices.flatten()
-    #     else:
-    #         indices = []  # Set to an empty list if there are no valid detections
-    #         mainImg = cv2.imwrite("mainImg.png", image)
-    #         return "mainImg.png", []
-    #     #Establish bounding box around entire image/detections
-    #     x_min = width
-    #     y_min = height
-    #     x_max = 0
-    #     y_max = 0
-
-        
-
-    #     for i in indices:
-    #         class_name = classes[class_ids[i]]
-    #         confidence = confidences[i]
-    #         print(f"Detected: {class_name} - Confidence: {confidence:.2f}")
-    #         # detections.append(class_name)
-    #         detections.append([class_name, boxes[i]])
-    #         x, y, w, h = boxes[i]
-    #         label=f"{classes[class_ids[i]]}: {confidences[i]:.2f}"
-    #         cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 40)
-    #         cv2.putText(image, label, (x, y - 40), cv2.FONT_HERSHEY_SIMPLEX, 5, (0, 255, 0), 5)
-            
-
-
-    #     for i in indices:
-    #         x, y, w, h = boxes[i]
-    #         x_min = min(x_min, x)
-    #         y_min = min(y_min, y)
-    #         x_max = max(x_max, x + w)
-    #         y_max = max(y_max, y + h)
-
-    #         # Expand bounding box by 200 pixels on each side
-    #         padding = 500
-    #         x_min = max(0, x_min - padding)
-    #         y_min = max(0, y_min - padding)
-    #         x_max = min(width, x_max + padding)
-    #         y_max = min(height, y_max + padding)
-
-    #         # Crop the image
-    #         cropped_mainImg = image[y_min:y_max, x_min:x_max]
-    #     cv2.namedWindow("YOLOv2 Detection", cv2.WINDOW_NORMAL)  # Allow resizing
-    #     cv2.resizeWindow("YOLOv2 Detection", 800, 600)  
-    #     cv2.imshow("YOLOv2 Detection", cropped_mainImg)
-    #     cv2.waitKey(5)
-    #     cv2.destroyAllWindows()
-    #     cv2.imwrite("mainImg.png", cropped_mainImg)
-    #     return "mainImg.png", detections, confidences

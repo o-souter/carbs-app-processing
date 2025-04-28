@@ -86,7 +86,7 @@ def store_data():
     clearDetectionDir()
     
     mainImg, foodImages, foodData = run_carbs_algo(imgFilePathToSave)
-    return createResponseZip("Image and pointcloud recieved and stored successfully. MarkerFound=" + str(markerFound), mainImg, foodImages, foodData)
+    return createResponseZip("Data processed successfully. MarkerFound=" + str(markerFound), mainImg, foodImages, foodData)
 
 
 @app.route("/get-food-classes", methods=['GET'])
@@ -442,7 +442,7 @@ def clearUploadDir():
         except Exception as e:
             print('Failed to delete %s. Reason: %s' % (file_path, e) + "\n")
     if len(os.listdir(uploadDir)) == 0:
-        print("Successfully cleared upload directory!\n", flush=True)
+        print("Successfully cleared upload directory!", flush=True)
 
 def clearAugmentationDir():
     # print("Attempting to clear augmentations directory...", flush=True)
@@ -457,7 +457,7 @@ def clearAugmentationDir():
         except Exception as e:
             print('Failed to delete %s. Reason: %s' % (file_path, e) + "\n")
     if len(os.listdir(augmentationDir)) == 0:
-        print("Successfully cleared augmentation directory!\n", flush=True)
+        print("Successfully cleared augmentation directory!", flush=True)
 
 def clearDetectionDir():
     # print("Attempting to clear detections directory...", flush=True)
@@ -472,7 +472,7 @@ def clearDetectionDir():
         except Exception as e:
             print('Failed to delete %s. Reason: %s' % (file_path, e) + "\n")
     if len(os.listdir(detectionDir)) == 0:
-        print("Successfully cleared detections directory!\n", flush=True)
+        print("Successfully cleared detections directory!", flush=True)
 
 
 def processImage(imgFilePath):
@@ -504,6 +504,8 @@ def get_git_commit_count():
 
 
 def get_version_number():
+    """Gets version number if git information is present, updating local file. 
+    If not present (deployment), version number is sourced from local file"""
     commits = get_git_commit_count()
     if commits is not None:
         versionNumber = serverMainVersion + commits
