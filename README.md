@@ -2,6 +2,8 @@
 ## Overview
 The **CARBS Processing Backend** is the server-side component of the CARBS (Carbohydrate Analysis and Recognition By Scan) system. It processes images captured by the Android app to perform food detection, volume estimation using fiducial markers, and carbohydrate calculation, returning results to the client app.
 
+View the CARBS Android Capture Tool app [here](https://github.com/o-souter/Carbs_Concept)!
+
 ## Features
 - Image upload and food detection via a YOLOv2 model trained on UEC-Food100.
 - Volume estimation using ArUco fiducial markers.
