@@ -15,23 +15,6 @@ The **CARBS Processing Backend** is the server-side component of the CARBS (Carb
 - OpenCV
 - YOLOv2
 - UEC-Food100 dataset
-
-## Setup Instructions
-1. Clone the repository:
-    ```bash
-    git clone https://github.com/o-souter/carbs-app-processing.git
-    cd carbs-app-processing
-    ```
-2. Install dependencies:
-    ```bash
-    pip install -r requirements.txt
-    ```
-3. Download YOLOv2 weights and config file, and place them in the food_image_processing directory.
-
-4. Run the server:
-    ```bash
-    python flaskapp.py
-    ```
     
 ## API Endpoints
 | Method | Endpoint           | Description                               |
