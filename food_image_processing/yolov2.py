@@ -1,48 +1,25 @@
+#yolov2.py - Handles food detection and segmentation using YoloV2, through its config and weights files
+
 import cv2
 import numpy as np
 import math
 from tqdm import tqdm
 import re
 import os
-from concurrent.futures import ThreadPoolExecutor
 
 cfg_path="""food_image_processing/yolov2-food100.cfg"""
 weights_path = """food_image_processing/yolov2-food100.weights"""
 names_path = """food_image_processing/food100.names"""
-
 bundlingDir = "bundling"
 
+#Set up YoloV2
 net = cv2.dnn.readNetFromDarknet(cfg_path, weights_path)
 layer_names = net.getLayerNames()
 output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers()]
 
-
+#Read class list
 with open(names_path, "r") as nameFile:
     classes = [line.strip() for line in nameFile.readlines()]
-
-def get_unique_detection_id(all_detections, detection, count=1):
-        existing_ids = [item[0] for item in all_detections]
-
-        if detection not in existing_ids:
-            return detection
-        
-        new_id = f"{detection}_{count}" if "_" not in detection else f"{detection.rsplit('_', 1)[0]}_{count}"
-        # Recurse if the new ID also exists
-        return get_unique_detection_id(new_id, all_detections, count + 1)
-
-def process_segment(args):
-    segment, x, y, shared_existing_labels = args
-    results = []
-    detections = YoloV2.process_image(segment)
-    for class_name, box, confidence in detections:
-        angle = 0
-        adjusted_box = YoloV2.adjust_bbox_for_rotation(box, angle, segment.shape)
-        adjusted_box[0] += x
-        adjusted_box[1] += y
-        unique_class_name = generate_unique_label(class_name, shared_existing_labels)
-        shared_existing_labels.add(unique_class_name)
-        results.append((unique_class_name, adjusted_box, confidence))
-    return results
 
 class YoloV2:
     @staticmethod
@@ -104,28 +81,10 @@ class YoloV2:
 
         return [new_x, new_y, new_width, new_height]
 
-    # @staticmethod
-    # def runYoloAndGetDetections(segment):
-    #     detections = YoloV2.process_image(segment)
-    #     for class_name, box, confidence in detections:
-    #         # Adjust bounding box from rotated segment back to the original image
-    #         angle = 0
-    #         adjusted_box = YoloV2.adjust_bbox_for_rotation(box, angle, segment.shape)
-    #         # Offset it to match original image coordinates
-    #         adjusted_box[0] += x
-    #         adjusted_box[1] += y
-    #         # all_detections.append([get_unique_detection_id(all_detections, class_name), adjusted_box])
-    #         unique_class_name = generate_unique_label(class_name, all_detections)
-    #         all_detections.append([unique_class_name, adjusted_box])
-    #         all_confidences.append(confidence)
-
-
-    #     return all_detections, all_confidences
-
     @staticmethod
     def analyse_image(path):
         """Analyses the image, returns detections, handles applying augmentations
-        THIS IS THE MAIN METHOD TO USE FOR IMAGE ANALYSIS
+        THIS IS THE MAIN METHOD TO CALL FOR IMAGE ANALYSIS
         """
         print("Analysing image...")
         original_image =  cv2.imread(path)
@@ -134,8 +93,6 @@ class YoloV2:
         all_detections = []
         all_confidences = []
         #First run on the initial image
-
-        # detections, confidences = YoloV2.runYoloAndGetDetections(original_image)
 
         detections = YoloV2.process_image(original_image)
         for class_name, box, confidence in detections:
@@ -157,20 +114,14 @@ class YoloV2:
                 #Run yolov2 and collect detections
                 detections = YoloV2.process_image(segment)
                 for class_name, box, confidence in detections:
-                    # Adjust bounding box from rotated segment back to the original image
-                    angle = 0
-                    adjusted_box = YoloV2.adjust_bbox_for_rotation(box, angle, segment.shape)
+                    adjusted_box = box #YoloV2.adjust_bbox_for_rotation(box, angle, segment.shape)
                     # Offset it to match original image coordinates
                     adjusted_box[0] += x
                     adjusted_box[1] += y
-                    # all_detections.append([get_unique_detection_id(all_detections, class_name), adjusted_box])
+
                     unique_class_name = generate_unique_label(class_name, all_detections)
                     all_detections.append([unique_class_name, adjusted_box])
                     all_confidences.append(confidence)
-
-                
-
-                
 
         filtered_detections = filter_overlapping_boxes(all_detections, all_confidences, width, height)
 
@@ -180,7 +131,6 @@ class YoloV2:
             cv2.rectangle(original_image, (x, y), (x + w, y + h), (0, 255, 0), 10)
             cv2.putText(original_image, class_name, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 5, (0, 255, 0), 5)
 
-            
         # Crop image to around where detections are (with 200px padding)
         if filtered_detections:
             x_coords = []
@@ -198,20 +148,13 @@ class YoloV2:
         else:
             cropped_image = original_image  # fallback to full image if no detections
 
-        # cv2.namedWindow("YOLOv2 Detection", cv2.WINDOW_NORMAL)  # Allow resizing
-        # cv2.resizeWindow("YOLOv2 Detection", 800, 600)  
-        # cv2.imshow("YOLOv2 Detection", cropped_image)
-        # cv2.waitKey(5)
-        # cv2.destroyAllWindows()
         mainImgPath = os.path.join(bundlingDir, "mainImg.png")
         cv2.imwrite(mainImgPath, cropped_image)
 
         return mainImgPath, filtered_detections, all_confidences
 
-
-    
-
 def generate_unique_label(base_label, existing_detections):
+    """Creates a unique label for an area where food is detected"""
     existing_labels = [sublist[0] for sublist in existing_detections]
     if base_label not in existing_labels:
         return base_label
@@ -225,6 +168,12 @@ def generate_unique_label(base_label, existing_detections):
     return new_label
 
 def filter_overlapping_boxes(all_detections, all_confidences, image_width, image_height):
+    """Filter out boxes with the following rules:
+    If a box is inside another, it is deleted
+    If two boxes of the same class name overlap, they merge
+    If a two boxes have IoU of >0.3, the smaller is deleted
+    If a box is too close to the image edge, it is deleted
+    """
     def is_box_inside(inner, outer):
         ix, iy, iw, ih = inner
         ox, oy, ow, oh = outer
@@ -254,11 +203,11 @@ def filter_overlapping_boxes(all_detections, all_confidences, image_width, image
 
         return inter_area / union_area if union_area != 0 else 0
 
-    def normalize_class_name(class_name):
+    def normalize_class_name(class_name): #Remove any trailing _x from a class name so they can be compared and are not unique
         return re.sub(r"_\d+$", "", class_name)
 
 
-    # Step 0: Remove boxes too close to the image edges (within 10 pixels)
+    # Remove boxes too close to the image edges (within 10 pixels)
     detections = [
         (class_name, box, confidence)
         for (class_name, box), confidence in zip(all_detections, all_confidences)
@@ -266,13 +215,13 @@ def filter_overlapping_boxes(all_detections, all_confidences, image_width, image
     ]
 
 
-    # Step 1: Combine into (original_class_name, box, confidence)
+    # Combine into (original_class_name, box, confidence)
     detections = [
         (class_name, box, confidence)
         for (class_name, box), confidence in zip(all_detections, all_confidences)
     ]
 
-    # Step 2: Remove boxes entirely inside another
+    # Remove boxes entirely inside another
     filtered = []
     for i, (c1, b1, conf1) in enumerate(detections):
         keep = True
@@ -283,7 +232,7 @@ def filter_overlapping_boxes(all_detections, all_confidences, image_width, image
         if keep:
             filtered.append((c1, b1, conf1))
 
-    # Step 3: Remove smaller box when different normalized class names overlap > 50%
+    # Remove smaller box when different normalized class names overlap
     to_remove = set()
     for i in range(len(filtered)):
         for j in range(i + 1, len(filtered)):
@@ -304,7 +253,7 @@ def filter_overlapping_boxes(all_detections, all_confidences, image_width, image
 
     filtered = [det for idx, det in enumerate(filtered) if idx not in to_remove]
 
-    # Step 4: Group and merge overlapping boxes by normalized class
+    # Group and merge overlapping boxes by normalized class
     visited = [False] * len(filtered)
     final_merged = []
 
