@@ -16,7 +16,7 @@ raisin-bread, 0.517
 chip-butty, 0.1
 hamburger, 0.3
 pizza, 0.23
-sandwiches, 0.34
+sandwich, 0.34
 udon-noodle, 0.22
 tempura-udon, 0.67
 soba-noodle, 0.696
@@ -65,7 +65,7 @@ spicy-chili-flavored-tofu, 0.011
 yakitori, 0.024
 cabbage-roll, 0.11667
 rolled-omelet, 0.04
-egg-sunny-side-up, 0.0
+fried-egg, 0.0
 fermented-soybeans, 0.046
 cold-tofu, 0.011
 egg-roll, 0.565

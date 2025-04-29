@@ -17,7 +17,7 @@ from food_image_processing import yolov2
 app = flask.Flask(__name__)
 CORS(app)
 uploadDir = "upload"
-augmentationDir = "augmentations"
+# augmentationDir = "augmentations"
 detectionDir = "detections"
 bundlingDir = "bundling"
 
@@ -56,19 +56,16 @@ def store_data():
     if 'image' not in request.files:
         print("Error: recieved data upload request but request contained no image", flush=True)
         return {"error": "No image file found"}
-    # if 'pointcloud' not in request.files:
-    #     print("Error: recieved data upload request but request contained no pointcloud file", flush=True)
-    #     return {"error": "No pointcloud file found"}
     
     image = request.files['image']
     if len(os.listdir(uploadDir)) >= 2:
         clearUploadDir()
 
     imgFilePathToSave = f"./upload/{image.filename}"
-    if os.path.isfile(imgFilePathToSave):
-        newFileName = image.filename.split(".")[0] + "_1"
-        print("An existing image already exists, renaming image file")
-        imgFilePathToSave = f"./upload/{newFileName}" + ".jpg"
+    # if os.path.isfile(imgFilePathToSave):
+    #     newFileName = image.filename.split(".")[0] + "_1"
+    #     print("An existing image already exists, renaming image file")
+    #     imgFilePathToSave = f"./upload/{newFileName}" + ".jpg"
     # image.save(f"./upload/{image.filename}")
     image.save(imgFilePathToSave)
     print("Recieved image from app capture, stored at: " + imgFilePathToSave, flush=True)
@@ -229,38 +226,38 @@ def rotate_image(image, angle):
     return rotated
 
 
-def augment_image(image_path, output_dir, num_crops=20, crop_size=(1008, 1344), step_x=150, step_y=150, rotations=np.arange(0, 360, 20), contrast_levels=np.arange(0.2, 2.0, 0.2)):
-    """ Applies cropping, rotation, and contrast adjustments to create multiple images """
-    os.makedirs(output_dir, exist_ok=True)
-    clearAugmentationDir()
-    print("Augmenting Image...", flush=True)
-    image = cv2.imread(image_path)
-    if image is None:
-        print("Error: Could not read image.")
-        return
+# def augment_image(image_path, output_dir, num_crops=20, crop_size=(1008, 1344), step_x=150, step_y=150, rotations=np.arange(0, 360, 20), contrast_levels=np.arange(0.2, 2.0, 0.2)):
+#     """ Applies cropping, rotation, and contrast adjustments to create multiple images """
+#     os.makedirs(output_dir, exist_ok=True)
+#     # clearAugmentationDir()
+#     print("Augmenting Image...", flush=True)
+#     image = cv2.imread(image_path)
+#     if image is None:
+#         print("Error: Could not read image.")
+#         return
 
-    base_name = os.path.splitext(os.path.basename(image_path))[0]
+#     base_name = os.path.splitext(os.path.basename(image_path))[0]
 
-    # # Apply Cropping
-    # for i in range(num_crops):
-    #     cropped = random_crop(image, crop_size=(1344, 1008))
-    #     cv2.imwrite(os.path.join(output_dir, f"{base_name}_crop{i}.jpg"), cropped)
-     # Grid-based Cropping
-    cropped_images = grid_crop(image, crop_size, step_x, step_y)
-    for i, (cropped, x, y) in enumerate(cropped_images):
-        cv2.imwrite(os.path.join(output_dir, f"{base_name}_crop_{x}_{y}.jpg"), cropped)
+#     # # Apply Cropping
+#     # for i in range(num_crops):
+#     #     cropped = random_crop(image, crop_size=(1344, 1008))
+#     #     cv2.imwrite(os.path.join(output_dir, f"{base_name}_crop{i}.jpg"), cropped)
+#      # Grid-based Cropping
+#     cropped_images = grid_crop(image, crop_size, step_x, step_y)
+#     for i, (cropped, x, y) in enumerate(cropped_images):
+#         cv2.imwrite(os.path.join(output_dir, f"{base_name}_crop_{x}_{y}.jpg"), cropped)
 
-    # Apply Rotations
-    for angle in rotations:
-        rotated = rotate_image(image, angle)
-        cv2.imwrite(os.path.join(output_dir, f"{base_name}_rot{angle}.jpg"), rotated)
+#     # Apply Rotations
+#     for angle in rotations:
+#         rotated = rotate_image(image, angle)
+#         cv2.imwrite(os.path.join(output_dir, f"{base_name}_rot{angle}.jpg"), rotated)
 
-    # Apply Contrast Adjustments
-    for level in contrast_levels:
-        contrasted = adjust_contrast(image, level)
-        cv2.imwrite(os.path.join(output_dir, f"{base_name}_contrast{level}.jpg"), contrasted)
+#     # Apply Contrast Adjustments
+#     for level in contrast_levels:
+#         contrasted = adjust_contrast(image, level)
+#         cv2.imwrite(os.path.join(output_dir, f"{base_name}_contrast{level}.jpg"), contrasted)
 
-    print("Augmentation complete! Images saved to:", output_dir)
+#     print("Augmentation complete! Images saved to:", output_dir)
 
 
 vol_accurate_threshold = 7
@@ -282,77 +279,77 @@ def calculate_volume(foodPath, box, markerLength):
     real_height = height * pixel_to_real
     real_depth = min(real_width, real_height) * 0.5
     return real_width * real_height * real_depth
-    # Extend the bounding box by 50px in each direction
-    padding = 50
-    x_min_extended = max(0, x_min - padding)  # Ensure we don't go below 0
-    y_min_extended = max(0, y_min - padding)  # Ensure we don't go below 0
-    width_extended = width + 2 * padding
-    height_extended = height + 2 * padding
+    # # Extend the bounding box by 50px in each direction
+    # padding = 50
+    # x_min_extended = max(0, x_min - padding)  # Ensure we don't go below 0
+    # y_min_extended = max(0, y_min - padding)  # Ensure we don't go below 0
+    # width_extended = width + 2 * padding
+    # height_extended = height + 2 * padding
 
-    # Crop the region with the extended bounding box
-    cropped = foodImg[y_min_extended:y_min_extended + height_extended, x_min_extended:x_min_extended + width_extended]
+    # # Crop the region with the extended bounding box
+    # cropped = foodImg[y_min_extended:y_min_extended + height_extended, x_min_extended:x_min_extended + width_extended]
 
-    # Preprocess the crop
-    gray = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    # # Preprocess the crop
+    # gray = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
+    # blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     
-    # Apply adaptive thresholding
-    thresh = cv2.adaptiveThreshold(gray, 255,
-                                   cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                   cv2.THRESH_BINARY_INV, 11, 2)
-    edges = thresh
-    debug_output = cropped.copy()
+    # # Apply adaptive thresholding
+    # thresh = cv2.adaptiveThreshold(gray, 255,
+    #                                cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+    #                                cv2.THRESH_BINARY_INV, 11, 2)
+    # edges = thresh
+    # debug_output = cropped.copy()
 
-    # Detect contours/edges
-    contours, _ = cv2.findContours(edges.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    if not contours:
-        print("No contours found. Falling back to bounding box estimation.")
-        real_width = width * pixel_to_real
-        real_height = height * pixel_to_real
-        real_depth = min(real_width, real_height) * 0.5
-        return real_width * real_height * real_depth
+    # # Detect contours/edges
+    # contours, _ = cv2.findContours(edges.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    # if not contours:
+    #     print("No contours found. Falling back to bounding box estimation.")
+    #     real_width = width * pixel_to_real
+    #     real_height = height * pixel_to_real
+    #     real_depth = min(real_width, real_height) * 0.5
+    #     return real_width * real_height * real_depth
 
-    # Find the largest contour
-    largest_contour = max(contours, key=cv2.contourArea)
+    # # Find the largest contour
+    # largest_contour = max(contours, key=cv2.contourArea)
     
-    if len(largest_contour) >= 5:
-        # Fit ellipse
-        ellipse = cv2.fitEllipse(largest_contour)
-        (center, axes, angle) = ellipse
-        major_axis = max(axes) * pixel_to_real
-        minor_axis = min(axes) * pixel_to_real
+    # if len(largest_contour) >= 5:
+    #     # Fit ellipse
+    #     ellipse = cv2.fitEllipse(largest_contour)
+    #     (center, axes, angle) = ellipse
+    #     major_axis = max(axes) * pixel_to_real
+    #     minor_axis = min(axes) * pixel_to_real
 
-        real_area = math.pi * (major_axis / 2) * (minor_axis / 2)
-        estimated_depth = min(major_axis, minor_axis) * 0.5
-        volume = real_area * estimated_depth
+    #     real_area = math.pi * (major_axis / 2) * (minor_axis / 2)
+    #     estimated_depth = min(major_axis, minor_axis) * 0.5
+    #     volume = real_area * estimated_depth
 
-        if volume < vol_accurate_threshold:
-            print("Below par ellipse detected. Falling back to bounding box estimation.")
-            real_width = width * pixel_to_real
-            real_height = height * pixel_to_real
-            real_depth = min(real_width, real_height) * 0.5
-            return real_width * real_height * real_depth
+    #     if volume < vol_accurate_threshold:
+    #         print("Below par ellipse detected. Falling back to bounding box estimation.")
+    #         real_width = width * pixel_to_real
+    #         real_height = height * pixel_to_real
+    #         real_depth = min(real_width, real_height) * 0.5
+    #         return real_width * real_height * real_depth
 
-        print(f"Ellipse-based area: {real_area:.2f}cm²")
-        print(f"Estimated depth: {estimated_depth:.2f}cm")
-        print(f"Estimated volume: {volume:.2f}cm³")
+    #     print(f"Ellipse-based area: {real_area:.2f}cm²")
+    #     print(f"Estimated depth: {estimated_depth:.2f}cm")
+    #     print(f"Estimated volume: {volume:.2f}cm³")
 
-        # Draw ellipse on debug image
-        cv2.ellipse(debug_output, ellipse, (0, 255, 0), 2)
-    else:
-        print("Not enough points for ellipse fitting. Falling back to bounding box.")
-        real_width = width * pixel_to_real
-        real_height = height * pixel_to_real
-        real_depth = min(real_width, real_height) * 0.5
-        return real_width * real_height * real_depth
+    #     # Draw ellipse on debug image
+    #     cv2.ellipse(debug_output, ellipse, (0, 255, 0), 2)
+    # else:
+    #     print("Not enough points for ellipse fitting. Falling back to bounding box.")
+    #     real_width = width * pixel_to_real
+    #     real_height = height * pixel_to_real
+    #     real_depth = min(real_width, real_height) * 0.5
+    #     return real_width * real_height * real_depth
 
-    # Show debug images
-    # cv2.imshow("Cropped Image with Ellipse", debug_output)
-    # cv2.imshow("Threshold", thresh)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+    # # Show debug images
+    # # cv2.imshow("Cropped Image with Ellipse", debug_output)
+    # # cv2.imshow("Threshold", thresh)
+    # # cv2.waitKey(0)
+    # # cv2.destroyAllWindows()
 
-    return volume
+    # return volume
 
 
     # pointcloud = "./upload/point_cloud.xyz"
@@ -444,20 +441,20 @@ def clearUploadDir():
     if len(os.listdir(uploadDir)) == 0:
         print("Successfully cleared upload directory!", flush=True)
 
-def clearAugmentationDir():
-    # print("Attempting to clear augmentations directory...", flush=True)
+# def clearAugmentationDir():
+#     # print("Attempting to clear augmentations directory...", flush=True)
     
-    for filename in os.listdir(augmentationDir):
-        file_path = os.path.join(augmentationDir, filename)
-        try:
-            if os.path.isfile(file_path) or os.path.islink(file_path):
-                os.unlink(file_path)
-            elif os.path.isdir(file_path):
-                shutil.rmtree(file_path)
-        except Exception as e:
-            print('Failed to delete %s. Reason: %s' % (file_path, e) + "\n")
-    if len(os.listdir(augmentationDir)) == 0:
-        print("Successfully cleared augmentation directory!", flush=True)
+#     for filename in os.listdir(augmentationDir):
+#         file_path = os.path.join(augmentationDir, filename)
+#         try:
+#             if os.path.isfile(file_path) or os.path.islink(file_path):
+#                 os.unlink(file_path)
+#             elif os.path.isdir(file_path):
+#                 shutil.rmtree(file_path)
+#         except Exception as e:
+#             print('Failed to delete %s. Reason: %s' % (file_path, e) + "\n")
+#     if len(os.listdir(augmentationDir)) == 0:
+#         print("Successfully cleared augmentation directory!", flush=True)
 
 def clearDetectionDir():
     # print("Attempting to clear detections directory...", flush=True)
@@ -474,6 +471,28 @@ def clearDetectionDir():
     if len(os.listdir(detectionDir)) == 0:
         print("Successfully cleared detections directory!", flush=True)
 
+
+def clearBundlingDirAndZip():    
+    for filename in os.listdir(bundlingDir):
+        file_path = os.path.join(bundlingDir, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print('Failed to delete %s. Reason: %s' % (file_path, e) + "\n")
+    if len(os.listdir(bundlingDir)) == 0:
+        print("Successfully cleared bundling directory!", flush=True)
+
+    #Delete ZIP bundle
+    if os.path.exists("files_bundle.zip"):
+        os.remove("files_bundle.zip")
+        if os.path.exists("files_bundle.zip"):
+            print("Unable to delete ZIP bundle")
+        else:
+            print("Successfully deleted ZIP bundle")
+    
 
 def processImage(imgFilePath):
     print("Running image processing on the following files:")
@@ -522,9 +541,10 @@ def get_version_number():
 
 if __name__ == '__main__':
     version = get_version_number()
-    clearAugmentationDir()
+    # clearAugmentationDir()
     clearUploadDir()
     clearDetectionDir()
+    clearBundlingDirAndZip()
     print("-" * 80)
     print("\nC.A.R.B.S Processing backend v" + str(version) + "\n")
     
